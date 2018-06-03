@@ -1,6 +1,6 @@
 #include <SD.h>
 #include <RTClib.h>
-#include <FileConfig.h>
+#include "src/FileConfig/FileConfig.h"
 
 #define BAUD_RATE    9600
 
