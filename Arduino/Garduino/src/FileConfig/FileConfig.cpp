@@ -43,8 +43,8 @@ void Timer::print() {
   Serial.println(FileConfig::fromMinutes(duration));
 }
 
-bool Timer::active(const DateTime& now) {
-  uint16_t now_minutes = now.hour() * 60 + now.minute();
+bool Timer::active(const time_t& now) {
+  uint16_t now_minutes = hour(now) * 60 + minute(now);
   return (now_minutes >= start_time) && ((now_minutes < start_time + duration) || (duration == 0));
 }
 
@@ -56,8 +56,8 @@ void Timer::setStartTime(const uint16_t& minute_of_day) {
   start_time = minute_of_day;
 }
 
-void Timer::setStartTime(const DateTime& time) {
-  setStartTime(time.hour(), time.minute());
+void Timer::setStartTime(const time_t& time) {
+  setStartTime(hour(time), minute(time));
 }
 
 

@@ -2,7 +2,7 @@
 #define _FILECONFIG_H_
 
 #include <Arduino.h>
-#include <RTClib.h>
+#include <TimeLib.h>
 #include <SD.h>
 
 class Switch {
@@ -27,11 +27,11 @@ public:
   uint16_t duration;
   
   void print();
-  bool active(const DateTime& now);
+  bool active(const time_t& now);
 
   void setStartTime(const uint8_t& hour, const uint8_t& minute);
   void setStartTime(const uint16_t& minute_of_day);
-  void setStartTime(const DateTime& time);
+  void setStartTime(const time_t& time);
 };
 
 class Counter {
@@ -73,6 +73,8 @@ public:
   AnalogSwitch moisture;
   AnalogSwitch rain;
   AnalogSwitch brightness;
+
+  bool isEnabled() { return enabled; }
 };
 
 
