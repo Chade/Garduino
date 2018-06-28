@@ -99,7 +99,7 @@ void lcdml_menu_control(void) {
       g_LCDML_CONTROL_button_press_time = millis();
     }
     else if (enter && !g_LCDML_CONTROL_button_prev) //rising edge, button not active
-        {
+    {
       g_LCDML_CONTROL_button_prev = HIGH;
 
       if (g_LCDML_CONTROL_button_press_time < 0) {
@@ -118,6 +118,7 @@ void lcdml_menu_control(void) {
   if (!quit) {
     if ((millis() - g_LCDML_CONTROL_button_press_time) >= CONTROL_BUTTON_DEBOUNCE) {
       g_LCDML_CONTROL_button_press_time = millis();
+      click_count = 0;
       LCDML.BT_quit();
     }
   }

@@ -4,124 +4,620 @@
 //
 // =============================================================================
 
-uint8_t col_count = 0;
-uint8_t blink_count = false;
-bool blink = true;
-bool modify = false;
-unsigned long timer = 0;
-TimeElements dateTime;
+
 
 
 // *****************************************************************************
-// Set time
+// Helper
 // *****************************************************************************
-void mFunc_set_time(uint8_t param) {
-  if(LCDML.FUNC_setup())          // ****** SETUP *********
+void timeMenu(TimeElements& tm, unsigned long& tmr) {
+  static bool blink = true;
+  static bool modify = false;
+  static uint8_t col_count = 0;
+
+  if (LCDML.TIMER_ms(tmr, 500)) {
+    blink = !blink;
+    tmr = millis();
+  }
+
+  if (LCDML.BT_checkAny()) {
+    if(LCDML.BT_checkEnter()) {
+      modify = !modify;
+      LCDML.BT_resetEnter();
+    }
+
+    if (LCDML.BT_checkUp()) {
+      if (!modify) {
+        col_count = (col_count <= 3) ? col_count + 3 : 0;
+      }
+      else  {
+        switch (col_count) {
+          case 0:
+            tm.Hour   = (tm.Hour   < 23) ? (tm.Hour   + 1 ) : (tm.Hour   - 23);
+            break;
+          case 3:
+            tm.Minute = (tm.Minute < 59) ? (tm.Minute + 1 ) : (tm.Minute - 59);
+            break;
+          case 6:
+            tm.Second = (tm.Second < 59) ? (tm.Second + 1 ) : (tm.Second - 59);
+            break;
+          default:
+            ;
+        }
+      }
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      if (!modify) {
+        col_count = (col_count >= 3) ? col_count - 3 : 6;
+      }
+      else {
+        switch (col_count) {
+          case 0:
+            tm.Hour   = (tm.Hour   >= 1 ) ? (tm.Hour   - 1 ) : (tm.Hour   + 23);
+            break;
+          case 3:
+            tm.Minute = (tm.Minute >= 1 ) ? (tm.Minute - 1 ) : (tm.Minute + 59);
+            break;
+          case 6:
+            tm.Second = (tm.Second >= 1 ) ? (tm.Second - 1 ) : (tm.Second + 59);
+            break;
+          default:
+            ;
+        }
+      }
+      LCDML.BT_resetDown();
+    }
+
+    if (LCDML.BT_checkLeft()) {
+      col_count = (col_count >= 3) ? col_count - 3 : 6;
+      LCDML.BT_resetLeft();
+    }
+
+    if (LCDML.BT_checkRight()) {
+      col_count = (col_count <= 3) ? col_count + 3 : 0;
+      LCDML.BT_resetRight();
+    }
+  }
+  
+  char buf[9];
+  sprintf (buf, "%02d:%02d:%02d", tm.Hour, tm.Minute, tm.Second);
+
+  u8g2.setFont(LCDML_DISP_FONT);
+  u8g2.firstPage();
+  do {
+    u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), "Set Time:");
+    u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 2), buf);
+
+    if(!modify || blink) {
+      u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + (LCDML_DISP_FONT_W * col_count), (LCDML_DISP_FONT_H * 1) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 2), LCDML_DISP_FONT_H - 1);
+    }
+    u8g2.drawFrame( LCDML_DISP_BOX_X0, LCDML_DISP_BOX_Y0, (LCDML_DISP_BOX_X1 - LCDML_DISP_BOX_X0), (LCDML_DISP_BOX_Y1 - LCDML_DISP_BOX_Y0) );
+  } while( u8g2.nextPage() );
+}
+
+
+void dateMenu(TimeElements& tm, unsigned long& tmr) {
+  static bool blink = true;
+  static bool modify = false;
+  static uint8_t col_count = 0;
+
+  if (LCDML.TIMER_ms(tmr, 500)) {
+    blink = !blink;
+    tmr = millis();
+  }
+
+  if (LCDML.BT_checkAny()) {
+    if(LCDML.BT_checkEnter()) {
+      modify = !modify;
+      LCDML.BT_resetEnter();
+    }
+
+    if (LCDML.BT_checkUp()) {
+      if (!modify) {
+        col_count = (col_count <= 3) ? col_count + 3 : 0;
+      }
+      else  {
+        switch(col_count) {
+          case 0:
+            tm.Day   = (tm.Day   < 31) ? (tm.Day   + 1 ) : (tm.Day   - 31);
+            break;
+          case 3:
+            tm.Month = (tm.Month < 12) ? (tm.Month + 1 ) : (tm.Month - 12);
+            break;
+          case 6:
+            tm.Year = (tm.Year < 99) ? (tm.Year + 1 ) : (tm.Year - 99);
+            break;
+          default:
+            ;
+        }
+      }
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      if (!modify) {
+        col_count = (col_count >= 3) ? col_count - 3 : 6;
+      }
+      else {
+         switch(col_count) {
+          case 0:
+            tm.Day   = (tm.Day   >= 1 ) ? (tm.Day   - 1 ) : (tm.Day   + 31);
+            break;
+          case 3:
+            tm.Month = (tm.Month >= 1 ) ? (tm.Month - 1 ) : (tm.Month + 12);
+            break;
+          case 6:
+            tm.Year = (tm.Year >= 1 ) ? (tm.Year - 1 ) : (tm.Year + 99);
+            break;
+          default:
+            ;
+        }
+      }
+      LCDML.BT_resetDown();
+    }
+
+    if (LCDML.BT_checkLeft()) {
+      col_count = (col_count >= 3) ? col_count - 3 : 6;
+      LCDML.BT_resetLeft();
+    }
+
+    if (LCDML.BT_checkRight()) {
+      col_count = (col_count <= 3) ? col_count + 3 : 0;
+      LCDML.BT_resetRight();
+    }
+  }
+
+  char buf[11];
+  sprintf (buf, "%02d.%02d.%04d", tm.Day, tm.Month, tm.Year + 1970);
+
+  u8g2.setFont(LCDML_DISP_FONT);
+  u8g2.firstPage();
+  do {
+    u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), "Set Date:");
+    u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 2), buf);
+
+    if(!modify || blink) {
+      if (col_count == 6) {
+        u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + (LCDML_DISP_FONT_W * col_count), (LCDML_DISP_FONT_H * 1) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+      }
+      else {
+        u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + (LCDML_DISP_FONT_W * col_count), (LCDML_DISP_FONT_H * 1) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 2), LCDML_DISP_FONT_H - 1);
+      }
+    }
+    u8g2.drawFrame( LCDML_DISP_BOX_X0, LCDML_DISP_BOX_Y0, (LCDML_DISP_BOX_X1 - LCDML_DISP_BOX_X0), (LCDML_DISP_BOX_Y1 - LCDML_DISP_BOX_Y0) );
+  } while( u8g2.nextPage() );
+}
+
+
+// *****************************************************************************
+// Set channel time
+// *****************************************************************************
+void mFunc_set_interval(uint8_t param) {
+  static bool blink = true;
+  static bool modify = false;
+  static uint8_t col_count = 0;
+  static uint8_t row_count = 0;
+  static TimeElements dateTime;
+  static unsigned long timer = 0;
+
+  if (LCDML.FUNC_setup())     // ****** Setup *********
   {
-    breakTime(now(), dateTime);
-
-    // Disable the screensaver for this function until it is closed
     LCDML.FUNC_disableScreensaver();
     LCDML.TIMER_msReset(timer);
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+    breakTime(now(), dateTime);
   }
 
-  if(LCDML.FUNC_loop())           // ****** LOOP *********
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
   {
-    if(LCDML.TIMER_ms(timer, 500))
-    {
+    if (LCDML.TIMER_ms(timer, 500)) {
       blink = !blink;
       timer = millis();
     }
-
-    if(LCDML.BT_checkAny()) // check if any button is pressed (enter, up, down, left, right)
-    {
-      if(LCDML.BT_checkEnter())
-      {
+  
+    if (LCDML.BT_checkAny()) {
+      if(LCDML.BT_checkEnter()) {
         modify = !modify;
         LCDML.BT_resetEnter();
       }
-
-      if(LCDML.BT_checkUp())
-      {
-        if(!modify)
-        {
-          col_count = (col_count <= 3) ? col_count + 3 : 0;
+  
+      if (LCDML.BT_checkUp()) {
+        if (!modify) {
+          if (col_count <= 3) {
+            col_count += 3;
+          }
+          else {
+            col_count = 0;
+            row_count = (row_count == 0) ? 1 : 0;
+          }
         }
-        else
-        {
-          switch(col_count) {
-            case 0:
-              dateTime.Hour   = (dateTime.Hour   < 23) ? (dateTime.Hour   + 1 ) : (dateTime.Hour   - 23);
-              break;
-            case 3:
-              dateTime.Minute = (dateTime.Minute < 59) ? (dateTime.Minute + 1 ) : (dateTime.Minute - 59);
-              break;
-            case 6:
-              dateTime.Second = (dateTime.Second < 59) ? (dateTime.Second + 1 ) : (dateTime.Second - 59);
-              break;
-            default:
-              ;
+        else  {
+          if (row_count == 0) {
+            switch(col_count) {
+              case 0:
+                dateTime.Hour   = (dateTime.Hour   < 23) ? (dateTime.Hour   + 1 ) : (dateTime.Hour   - 23);
+                break;
+              case 3:
+                dateTime.Minute = (dateTime.Minute < 59) ? (dateTime.Minute + 1 ) : (dateTime.Minute - 59);
+                break;
+              case 6:
+                dateTime.Second = (dateTime.Second < 59) ? (dateTime.Second + 1 ) : (dateTime.Second - 59);
+                break;
+              default:
+                ;
+            }
+          }
+          else {
+            switch (col_count) {
+              case 0:
+                dateTime.Hour   = (dateTime.Hour   < 23) ? (dateTime.Hour   + 1 ) : (dateTime.Hour   - 23);
+                break;
+              case 3:
+                dateTime.Minute = (dateTime.Minute < 59) ? (dateTime.Minute + 1 ) : (dateTime.Minute - 59);
+                break;
+              case 6:
+                dateTime.Second = (dateTime.Second < 59) ? (dateTime.Second + 1 ) : (dateTime.Second - 59);
+                break;
+              default:
+                ;
+            }
           }
         }
         LCDML.BT_resetUp();
       }
-
-      if(LCDML.BT_checkDown())
-      {
-        if(!modify)
-        {
-          col_count = (col_count >= 3) ? col_count - 3 : 6;
+  
+      if (LCDML.BT_checkDown()) {
+        if (!modify) {
+          if (col_count >= 3) {
+            col_count -= 3;
+          }
+          else {
+            col_count = 6;
+            row_count = (row_count == 0) ? 1 : 0;
+          }
         }
-        else
-        {
-          switch(col_count) {
-            case 0:
-              dateTime.Hour   = (dateTime.Hour   >= 1 ) ? (dateTime.Hour   - 1 ) : (dateTime.Hour   + 23);
-              break;
-            case 3:
-              dateTime.Minute = (dateTime.Minute >= 1 ) ? (dateTime.Minute - 1 ) : (dateTime.Minute + 59);
-              break;
-            case 6:
-              dateTime.Second = (dateTime.Second >= 1 ) ? (dateTime.Second - 1 ) : (dateTime.Second + 59);
-              break;
-            default:
-              ;
+        else {
+          if (row_count == 0) {
+            switch(col_count) {
+              case 0:
+                dateTime.Hour   = (dateTime.Hour   >= 1 ) ? (dateTime.Hour   - 1 ) : (dateTime.Hour   + 23);
+                break;
+              case 3:
+                dateTime.Minute = (dateTime.Minute >= 1 ) ? (dateTime.Minute - 1 ) : (dateTime.Minute + 59);
+                break;
+              case 6:
+                dateTime.Second = (dateTime.Second >= 1 ) ? (dateTime.Second - 1 ) : (dateTime.Second + 59);
+                break;
+              default:
+                ;
+            }
+          }
+          else {
+            switch (col_count) {
+              case 0:
+                dateTime.Hour   = (dateTime.Hour   >= 1 ) ? (dateTime.Hour   - 1 ) : (dateTime.Hour   + 23);
+                break;
+              case 3:
+                dateTime.Minute = (dateTime.Minute >= 1 ) ? (dateTime.Minute - 1 ) : (dateTime.Minute + 59);
+                break;
+              case 6:
+                dateTime.Second = (dateTime.Second >= 1 ) ? (dateTime.Second - 1 ) : (dateTime.Second + 59);
+                break;
+              default:
+                ;
+            }
           }
         }
         LCDML.BT_resetDown();
       }
-
-
-      if(LCDML.BT_checkLeft())
-      {
-        col_count = (col_count >= 3) ? col_count - 3 : 6;
+  
+      if (LCDML.BT_checkLeft()) {
+        if (col_count >= 3) {
+          col_count -= 3;
+        }
+        else {
+          col_count = 6;
+          row_count = (row_count == 0) ? 1 : 0;
+        }
         LCDML.BT_resetLeft();
       }
-
-      if(LCDML.BT_checkRight())
-      {
-        col_count = (col_count <= 3) ? col_count + 3 : 0;
+  
+      if (LCDML.BT_checkRight()) {
+        if (col_count <= 3) {
+          col_count += 3;
+        }
+        else {
+          col_count = 0;
+          row_count = (row_count == 0) ? 1 : 0;
+        }
         LCDML.BT_resetRight();
       }
     }
 
-    char buf[8];
-    sprintf (buf, "%02d:%02d:%02d", dateTime.Hour, dateTime.Minute, dateTime.Second);
-
+    char bufStart[15];
+    sprintf (bufStart, "Start: %02d:%02d:%02d", dateTime.Hour, dateTime.Minute, dateTime.Second);
+    
+    char bufEnd[15];
+    sprintf (bufEnd, "End:  %02d:%02d:%02d", dateTime.Hour, dateTime.Minute, dateTime.Second);
+  
     u8g2.setFont(LCDML_DISP_FONT);
     u8g2.firstPage();
     do {
-      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 1), "Adjust Time:");
-      u8g2.drawStr( 1, (LCDML_DISP_FONT_H * 2), buf);
-
+      u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), bufStart);
+      u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 2), bufEnd);
+  
       if(!modify || blink) {
-        u8g2.drawFrame( (LCDML_DISP_FONT_W * col_count), (LCDML_DISP_FONT_H * 1) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 2) + 1, LCDML_DISP_FONT_H - 1);
+        if ((row_count == 0) && (col_count == 6)) {
+          u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 6), (LCDML_DISP_FONT_H * row_count) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1 );
+        }
+        else {
+          u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 6), (LCDML_DISP_FONT_H * row_count) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 2), LCDML_DISP_FONT_H - 1 );
+        }
       }
+      u8g2.drawFrame( LCDML_DISP_BOX_X0, LCDML_DISP_BOX_Y0, (LCDML_DISP_BOX_X1 - LCDML_DISP_BOX_X0), (LCDML_DISP_BOX_Y1 - LCDML_DISP_BOX_Y0) );
     } while( u8g2.nextPage() );
   }
 
-  if(LCDML.FUNC_close())      // ****** STABLE END *********
+  if(LCDML.FUNC_close())      // ****** END *********
+  {
+    setTime(makeTime(dateTime));
+  }
+}
+
+// *****************************************************************************
+// Set time
+// *****************************************************************************
+void mFunc_ch_time(uint8_t param) {
+  static TimeElements dateTime;
+  static unsigned long timer = 0;
+
+  if (LCDML.FUNC_setup())     // ****** Setup *********
+  {
+    LCDML.FUNC_disableScreensaver();
+    LCDML.TIMER_msReset(timer);
+    LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+    dateTime.Hour = channel[param].time.getStartTime() / 3600;
+    dateTime.Minute = channel[param].time.getStartTime() % 3600 / 60;
+  }
+
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
+  {
+    timeMenu(dateTime, timer);
+  }
+
+  if(LCDML.FUNC_close())      // ****** END *********
+  {
+    channel[param].time.setStartTime(makeTime(dateTime));
+  }
+}
+
+
+// *****************************************************************************
+// Set duration
+// *****************************************************************************
+void mFunc_ch_duration(uint8_t param) {
+  static TimeElements dateTime;
+  static unsigned long timer = 0;
+
+  if (LCDML.FUNC_setup())     // ****** Setup *********
+  {
+    LCDML.FUNC_disableScreensaver();
+    LCDML.TIMER_msReset(timer);
+    LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+    dateTime.Hour = channel[param].time.getStartTime() / 3600;
+    dateTime.Minute = channel[param].time.getStartTime() % 3600 / 60;
+  }
+
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
+  {
+    timeMenu(dateTime, timer);
+  }
+
+  if(LCDML.FUNC_close())      // ****** END *********
+  {
+    channel[param].time.setStartTime(makeTime(dateTime));
+  }
+}
+
+
+// *****************************************************************************
+// Set clock
+// *****************************************************************************
+void mFunc_set_clock(uint8_t param) {
+  static bool blink = true;
+  static bool modify = false;
+  static uint8_t col_count = 0;
+  static uint8_t row_count = 0;
+  static TimeElements dateTime;
+  static unsigned long timer = 0;
+
+  if (LCDML.FUNC_setup())     // ****** Setup *********
+  {
+    LCDML.FUNC_disableScreensaver();
+    LCDML.TIMER_msReset(timer);
+    LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+    breakTime(now(), dateTime);
+  }
+
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
+  {
+    if (LCDML.TIMER_ms(timer, 500)) {
+      blink = !blink;
+      timer = millis();
+    }
+  
+    if (LCDML.BT_checkAny()) {
+      if(LCDML.BT_checkEnter()) {
+        modify = !modify;
+        LCDML.BT_resetEnter();
+      }
+  
+      if (LCDML.BT_checkUp()) {
+        if (!modify) {
+          if (col_count <= 3) {
+            col_count += 3;
+          }
+          else {
+            col_count = 0;
+            row_count = (row_count == 0) ? 1 : 0;
+          }
+        }
+        else  {
+          if (row_count == 0) {
+            switch(col_count) {
+              case 0:
+                dateTime.Day   = (dateTime.Day   < 31) ? (dateTime.Day   + 1 ) : (dateTime.Day   - 31);
+                break;
+              case 3:
+                dateTime.Month = (dateTime.Month < 12) ? (dateTime.Month + 1 ) : (dateTime.Month - 12);
+                break;
+              case 6:
+                dateTime.Year = (dateTime.Year < 99) ? (dateTime.Year + 1 ) : (dateTime.Year - 99);
+                break;
+              default:
+                ;
+            }
+          }
+          else {
+            switch (col_count) {
+              case 0:
+                dateTime.Hour   = (dateTime.Hour   < 23) ? (dateTime.Hour   + 1 ) : (dateTime.Hour   - 23);
+                break;
+              case 3:
+                dateTime.Minute = (dateTime.Minute < 59) ? (dateTime.Minute + 1 ) : (dateTime.Minute - 59);
+                break;
+              case 6:
+                dateTime.Second = (dateTime.Second < 59) ? (dateTime.Second + 1 ) : (dateTime.Second - 59);
+                break;
+              default:
+                ;
+            }
+          }
+        }
+        LCDML.BT_resetUp();
+      }
+  
+      if (LCDML.BT_checkDown()) {
+        if (!modify) {
+          if (col_count >= 3) {
+            col_count -= 3;
+          }
+          else {
+            col_count = 6;
+            row_count = (row_count == 0) ? 1 : 0;
+          }
+        }
+        else {
+          if (row_count == 0) {
+            switch(col_count) {
+              case 0:
+                dateTime.Day   = (dateTime.Day   >= 1 ) ? (dateTime.Day   - 1 ) : (dateTime.Day   + 31);
+                break;
+              case 3:
+                dateTime.Month = (dateTime.Month >= 1 ) ? (dateTime.Month - 1 ) : (dateTime.Month + 12);
+                break;
+              case 6:
+                dateTime.Year = (dateTime.Year >= 1 ) ? (dateTime.Year - 1 ) : (dateTime.Year + 99);
+                break;
+              default:
+                ;
+            }
+          }
+          else {
+            switch (col_count) {
+              case 0:
+                dateTime.Hour   = (dateTime.Hour   >= 1 ) ? (dateTime.Hour   - 1 ) : (dateTime.Hour   + 23);
+                break;
+              case 3:
+                dateTime.Minute = (dateTime.Minute >= 1 ) ? (dateTime.Minute - 1 ) : (dateTime.Minute + 59);
+                break;
+              case 6:
+                dateTime.Second = (dateTime.Second >= 1 ) ? (dateTime.Second - 1 ) : (dateTime.Second + 59);
+                break;
+              default:
+                ;
+            }
+          }
+        }
+        LCDML.BT_resetDown();
+      }
+  
+      if (LCDML.BT_checkLeft()) {
+        if (col_count >= 3) {
+          col_count -= 3;
+        }
+        else {
+          col_count = 6;
+          row_count = (row_count == 0) ? 1 : 0;
+        }
+        LCDML.BT_resetLeft();
+      }
+  
+      if (LCDML.BT_checkRight()) {
+        if (col_count <= 3) {
+          col_count += 3;
+        }
+        else {
+          col_count = 0;
+          row_count = (row_count == 0) ? 1 : 0;
+        }
+        LCDML.BT_resetRight();
+      }
+    }
+
+    char bufDate[17];
+    sprintf (bufDate, "Date: %02d.%02d.%04d", dateTime.Day, dateTime.Month, dateTime.Year + 1970);
+    
+    char bufTime[15];
+    sprintf (bufTime, "Time: %02d:%02d:%02d", dateTime.Hour, dateTime.Minute, dateTime.Second);
+  
+    u8g2.setFont(LCDML_DISP_FONT);
+    u8g2.firstPage();
+    do {
+      u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), bufDate);
+      u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 2), bufTime);
+  
+      if(!modify || blink) {
+        if ((row_count == 0) && (col_count == 6)) {
+          u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 6), (LCDML_DISP_FONT_H * row_count) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1 );
+        }
+        else {
+          u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 6), (LCDML_DISP_FONT_H * row_count) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 2), LCDML_DISP_FONT_H - 1 );
+        }
+      }
+      u8g2.drawFrame( LCDML_DISP_BOX_X0, LCDML_DISP_BOX_Y0, (LCDML_DISP_BOX_X1 - LCDML_DISP_BOX_X0), (LCDML_DISP_BOX_Y1 - LCDML_DISP_BOX_Y0) );
+    } while( u8g2.nextPage() );
+  }
+
+  if(LCDML.FUNC_close())      // ****** END *********
+  {
+    setTime(makeTime(dateTime));
+  }
+}
+
+// *****************************************************************************
+// Set global time
+// *****************************************************************************
+void mFunc_set_time(uint8_t param) {
+  static TimeElements dateTime;
+  static unsigned long timer = 0;
+
+  if (LCDML.FUNC_setup())     // ****** Setup *********
+  {
+    LCDML.FUNC_disableScreensaver();
+    LCDML.TIMER_msReset(timer);
+    LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+    breakTime(now(), dateTime);
+  }
+
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
+  {
+    timeMenu(dateTime, timer);
+  }
+
+  if(LCDML.FUNC_close())      // ****** END *********
   {
     setTime(makeTime(dateTime));
   }
@@ -129,117 +625,23 @@ void mFunc_set_time(uint8_t param) {
 
 
 // *****************************************************************************
-// Set date
+// Set global date
 // *****************************************************************************
 void mFunc_set_date(uint8_t param) {
-  if(LCDML.FUNC_setup())          // ****** SETUP *********
+  static TimeElements dateTime;
+  static unsigned long timer = 0;
+  
+  if (LCDML.FUNC_setup())     // ****** Setup *********
   {
-    breakTime(now(), dateTime);
-
-    // Disable the screensaver for this function until it is closed
     LCDML.FUNC_disableScreensaver();
     LCDML.TIMER_msReset(timer);
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+    breakTime(now(), dateTime);
   }
 
-  if(LCDML.FUNC_loop())           // ****** LOOP *********
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
   {
-    if(LCDML.TIMER_ms(timer, 500))
-    {
-      blink = !blink;
-      timer = millis();
-    }
-
-    if(LCDML.BT_checkAny()) // check if any button is pressed (enter, up, down, left, right)
-    {
-      if(LCDML.BT_checkEnter())
-      {
-        modify = !modify;
-        LCDML.BT_resetEnter();
-      }
-
-      if(LCDML.BT_checkUp())
-      {
-        if(!modify)
-        {
-          col_count = (col_count <= 3) ? col_count + 3 : 0;
-        }
-        else
-        {
-          switch(col_count) {
-            case 0:
-              dateTime.Day   = (dateTime.Day   < 31) ? (dateTime.Day   + 1 ) : (dateTime.Day   - 31);
-              break;
-            case 3:
-              dateTime.Month = (dateTime.Month < 12) ? (dateTime.Month + 1 ) : (dateTime.Month - 12);
-              break;
-            case 6:
-              dateTime.Year = (dateTime.Year < 99) ? (dateTime.Year + 1 ) : (dateTime.Year - 99);
-              break;
-            default:
-              ;
-          }
-        }
-        LCDML.BT_resetUp();
-      }
-
-      if(LCDML.BT_checkDown())
-      {
-        if(!modify)
-        {
-          col_count = (col_count >= 3) ? col_count - 3 : 6;
-        }
-        else
-        {
-          switch(col_count) {
-            case 0:
-              dateTime.Day   = (dateTime.Day   >= 1 ) ? (dateTime.Day   - 1 ) : (dateTime.Day   + 31);
-              break;
-            case 3:
-              dateTime.Month = (dateTime.Month >= 1 ) ? (dateTime.Month - 1 ) : (dateTime.Month + 12);
-              break;
-            case 6:
-              dateTime.Year = (dateTime.Year >= 1 ) ? (dateTime.Year - 1 ) : (dateTime.Year + 99);
-              break;
-            default:
-              ;
-          }
-        }
-        LCDML.BT_resetDown();
-      }
-
-
-      if(LCDML.BT_checkLeft())
-      {
-        col_count = (col_count >= 3) ? col_count - 3 : 6;
-        LCDML.BT_resetLeft();
-      }
-
-      if(LCDML.BT_checkRight())
-      {
-        col_count = (col_count <= 3) ? col_count + 3 : 0;
-        LCDML.BT_resetRight();
-      }
-    }
-
-    char buf[11];
-    sprintf (buf, "%02d.%02d.%04d", dateTime.Day, dateTime.Month, dateTime.Year + 1970);
-
-    u8g2.setFont(LCDML_DISP_FONT);
-    u8g2.firstPage();
-    do {
-      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 1), "Adjust Date:");
-      u8g2.drawStr( 1, (LCDML_DISP_FONT_H * 2), buf);
-
-      if(!modify || blink) {
-        if (col_count == 6) {
-          u8g2.drawFrame( (LCDML_DISP_FONT_W * col_count), (LCDML_DISP_FONT_H * 1) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4) + 1, LCDML_DISP_FONT_H - 1);
-        }
-        else {
-          u8g2.drawFrame( (LCDML_DISP_FONT_W * col_count), (LCDML_DISP_FONT_H * 1) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 2) + 1, LCDML_DISP_FONT_H - 1);
-        }
-      }
-    } while( u8g2.nextPage() );
+    dateMenu(dateTime, timer);
   }
 
   if(LCDML.FUNC_close())      // ****** STABLE END *********
@@ -259,6 +661,7 @@ void mFunc_set_date(uint8_t param) {
 void mFunc_home(uint8_t param) {
   // Setup
   if(LCDML.FUNC_setup()) {
+    click_count = 0;
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
   }
 
@@ -311,4 +714,5 @@ void mFunc_back(uint8_t param) {
     LCDML.FUNC_goBackToMenu(1);      // leave this function and go a layer back
   }
 }
+
 

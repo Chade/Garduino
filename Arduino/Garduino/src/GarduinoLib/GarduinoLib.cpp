@@ -1,4 +1,4 @@
-#include "FileConfig.h"
+#include "GarduinoLib.h"
 
 bool Switch::isEnabled() {
   return enabled;
@@ -26,9 +26,9 @@ void Switch::setPin(const byte& pin) {
 
 void Switch::print() {
   Serial.print(F("  Enabled = "));
-  Serial.println(FileConfig::fromBool(isEnabled()));
+  Serial.println(GarduinoLib::fromBool(isEnabled()));
   Serial.print(F("  Invert = "));
-  Serial.println(FileConfig::fromBool(isInverted()));
+  Serial.println(GarduinoLib::fromBool(isInverted()));
   Serial.print(F("  Input = "));
   Serial.println(input);
 }
@@ -38,9 +38,9 @@ void Switch::print() {
 void Timer::print() {
   Serial.println(F("[Timer]"));
   Serial.print(F("  Start = "));
-  Serial.println(FileConfig::fromMinutes(start_time));
+  Serial.println(GarduinoLib::fromMinutes(start_time));
   Serial.print(F("  Duration = "));
-  Serial.println(FileConfig::fromMinutes(duration));
+  Serial.println(GarduinoLib::fromMinutes(duration));
 }
 
 bool Timer::active(const time_t& now) {
@@ -48,18 +48,18 @@ bool Timer::active(const time_t& now) {
   return (now_minutes >= start_time) && ((now_minutes < start_time + duration) || (duration == 0));
 }
 
-void Timer::setStartTime(const uint8_t& hour, const uint8_t& minute) {
-  start_time = hour * 60 + minute;
-}
-
-void Timer::setStartTime(const uint16_t& minute_of_day) {
-  start_time = minute_of_day;
+void Timer::setStartTime(const uint8_t& hour, const uint8_t& minute, const uint8_t& second) {
+  start_time = hour * SECS_PER_HOUR + minute * SECS_PER_MIN + second;
 }
 
 void Timer::setStartTime(const time_t& time) {
-  setStartTime(hour(time), minute(time));
+  start_time = time;
+  //setStartTime(hour(time), minute(time), second(time));
 }
 
+time_t Timer::getStartTime() {
+  return start_time;
+}
 
 
 void Counter::print() {
@@ -80,7 +80,7 @@ void DigitalSwitch::print() {
   Serial.println(F("[DigitalSwitch]"));
   Switch::print();
   Serial.print(F("  Value = "));
-  Serial.println(FileConfig::fromBool(getValue()));
+  Serial.println(GarduinoLib::fromBool(getValue()));
 }
 
 bool DigitalSwitch::active() {
@@ -118,15 +118,15 @@ int AnalogSwitch::getValue() {
 }
 
 
-bool FileConfig::toBool(const String& value) {
+bool GarduinoLib::toBool(const String& value) {
   return value.equalsIgnoreCase(F("true")) ? true : false;
 }
 
-String FileConfig::fromBool(const bool& value) {
+String GarduinoLib::fromBool(const bool& value) {
   return value == true ? F("true") : F("false");
 }
 
-unsigned int FileConfig::toMinutes(const String& value) {
+unsigned int GarduinoLib::toMinutes(const String& value) {
   int i = value.indexOf(':');
   if (i != -1) {
     // Duration in HH:MM format
@@ -138,14 +138,35 @@ unsigned int FileConfig::toMinutes(const String& value) {
   }
 }
 
-String FileConfig::fromMinutes(const unsigned int& value) {
+unsigned long int GarduinoLib::toSeconds(const String& value) {
+  unsigned long int out = 0;
+  int i = value.indexOf(':');
+  if (i != -1) {
+    // Duration in HH:MM format
+    out = value.substring(0, i).toInt() * 60 + value.substring(i+1, i+3).toInt();
+    
+    i = value.indexOf(':', i+1);
+    if (i != -1) {
+      // Duration in HH:MM:SS format
+      out += value.substring(0, i).toInt();
+    }
+  }
+  else {
+    // Duration in MMM format
+    return value.toInt();
+  }
+  
+  return out;
+}
+
+String GarduinoLib::fromMinutes(const unsigned int& value) {
   unsigned int hour = value / 60;
   unsigned int minute = value % 60;
 
-  return fromTime(hour, minute);
+  return fromTime(hour, minute, 0);
 }
 
-String FileConfig::fromTime(const unsigned int& hour, const unsigned int& minute) {
+String GarduinoLib::fromTime(const unsigned int& hour, const unsigned int& minute, const unsigned int& second) {
   String out;
 
   if (hour < 10) {
@@ -161,10 +182,41 @@ String FileConfig::fromTime(const unsigned int& hour, const unsigned int& minute
 
   out += minute;
 
+  if (second < 10) {
+    out += '0';
+  }
+
+  out += second;
+
   return out;
 }
 
-bool FileConfig::readConfig(File configFile, Channel* channel, const byte& channelSize){
+String GarduinoLib::fromTime(const time_t& time) {
+  String out;
+
+  if (hour(time) < 10) {
+    out += '0';
+  }
+
+  out += hour(time);
+  out += ':';
+
+  if (minute(time) < 10) {
+    out += '0';
+  }
+
+  out += minute(time);
+
+  if (second(time) < 10) {
+    out += '0';
+  }
+
+  out += second(time);
+
+  return out;
+}
+
+bool GarduinoLib::readConfig(File configFile, Channel* channel, const byte& channelSize){
   if (configFile) {
     byte channelIndex = 255; // Remember which channel is currently processed
 
@@ -221,17 +273,17 @@ bool FileConfig::readConfig(File configFile, Channel* channel, const byte& chann
   return true;
 }
 
-bool FileConfig::parseConfig(const String& key, const String& value, Channel& channel){
+bool GarduinoLib::parseConfig(const String& key, const String& value, Channel& channel){
   if (key.equalsIgnoreCase(F("Enabled"))) {
-    channel.enabled = FileConfig::toBool(value);
+    channel.enabled = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("TimeStart"))) {
-    channel.time.start_time = FileConfig::toMinutes(value);
+    channel.time.start_time = GarduinoLib::toSeconds(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("TimeDuration"))) {
-    channel.time.duration = FileConfig::toMinutes(value);
+    channel.time.duration = GarduinoLib::toSeconds(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("FlowCount"))) {
@@ -239,11 +291,11 @@ bool FileConfig::parseConfig(const String& key, const String& value, Channel& ch
     return true;
   }
   else if (key.equalsIgnoreCase(F("MovementEnabled"))) {
-    channel.movement.enabled = FileConfig::toBool(value);
+    channel.movement.enabled = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("MovementInvert"))) {
-    channel.movement.inverted = FileConfig::toBool(value);
+    channel.movement.inverted = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("MovementPin"))) {
@@ -251,11 +303,11 @@ bool FileConfig::parseConfig(const String& key, const String& value, Channel& ch
     return true;
   }
   else if (key.equalsIgnoreCase(F("MoistureEnabled"))) {
-    channel.moisture.enabled = FileConfig::toBool(value);
+    channel.moisture.enabled = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("MoistureInvert"))) {
-    channel.moisture.inverted = FileConfig::toBool(value);
+    channel.moisture.inverted = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("MoisturePin"))) {
@@ -271,11 +323,11 @@ bool FileConfig::parseConfig(const String& key, const String& value, Channel& ch
     return true;
   }
   else if (key.equalsIgnoreCase(F("RainEnabled"))) {
-    channel.rain.enabled = FileConfig::toBool(value);
+    channel.rain.enabled = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("RainInvert"))) {
-    channel.rain.inverted = FileConfig::toBool(value);
+    channel.rain.inverted = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("RainPin"))) {
@@ -291,11 +343,11 @@ bool FileConfig::parseConfig(const String& key, const String& value, Channel& ch
     return true;
   }
   else if (key.equalsIgnoreCase(F("BrightnessEnabled"))) {
-    channel.brightness.enabled = FileConfig::toBool(value);
+    channel.brightness.enabled = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("BrightnessInvert"))) {
-    channel.brightness.inverted = FileConfig::toBool(value);
+    channel.brightness.inverted = GarduinoLib::toBool(value);
     return true;
   }
   else if (key.equalsIgnoreCase(F("BrightnessPin"))) {

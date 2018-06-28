@@ -1,5 +1,5 @@
-#ifndef _FILECONFIG_H_
-#define _FILECONFIG_H_
+#ifndef _GARDUINOLIB_H_
+#define _GARDUINOLIB_H_
 
 #include <Arduino.h>
 #include <TimeLib.h>
@@ -23,15 +23,16 @@ public:
 
 class Timer {
 public:
-  uint16_t start_time;
-  uint16_t duration;
+  time_t start_time;
+  time_t duration;
   
   void print();
   bool active(const time_t& now);
 
-  void setStartTime(const uint8_t& hour, const uint8_t& minute);
-  void setStartTime(const uint16_t& minute_of_day);
+  void setStartTime(const uint8_t& hour, const uint8_t& minute, const uint8_t& second);
   void setStartTime(const time_t& time);
+  
+  time_t getStartTime();
 };
 
 class Counter {
@@ -48,6 +49,8 @@ public:
   void print();
   bool active();
   bool getValue();
+  
+  uint32_t delay;
 };
 
 class AnalogSwitch : public Switch {
@@ -78,15 +81,18 @@ public:
 };
 
 
-class FileConfig
+class GarduinoLib
 {
   public:
     static bool toBool(const String& value);
     static String fromBool(const bool& value);
 
+
     static unsigned int toMinutes(const String& value);
+    static unsigned long int toSeconds(const String& value);
     static String fromMinutes(const unsigned int& value);
-    static String fromTime(const unsigned int& hour, const unsigned int& minute);
+    static String fromTime(const time_t& time);
+    static String fromTime(const unsigned int& hour, const unsigned int& minute, const unsigned int& second);
 
     static bool readConfig(File configFile, Channel* channel, const byte& channelSize);
     static bool parseConfig(const String& key, const String& value, Channel& channel);
@@ -94,4 +100,4 @@ class FileConfig
 
 };
 
-#endif // _FILECONFIG_H_
+#endif // _GARDUINOLIB_H_

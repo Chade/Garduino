@@ -4,102 +4,509 @@
 //
 // =============================================================================
 
-
 // *****************************************************************************
 // Helper
 // *****************************************************************************
-void toggle(const uint8_t & line, const uint8_t& idx) {
-  // Check if this function is active (cursor is on this line)
-  if (line == LCDML.MENU_getCursorPos()) {
+uint8_t isSelected(const uint8_t& cursorPos, const uint8_t& count = 1) {
+   // Check if this function is active (cursor is on this line)
+  if (cursorPos == LCDML.MENU_getCursorPos()) {
     if (LCDML.BT_checkAny()) {
       if (LCDML.BT_checkEnter()) {
+        click_count = (click_count < count) ? click_count + 1 : 0;
+
         if (LCDML.MENU_getScrollDisableStatus() == 0) {
-          // Disable the menu scroll function to catch the cursor on this point
-          // Now it is possible to work with BT_checkUp and BT_checkDown in this function
           // This function can only be called in a menu, not in a menu function
           LCDML.MENU_disScroll();
+          LCDML.FUNC_disableScreensaver();
         }
-        else {
+        else if(click_count == 0) {
           // Enable the normal menu scroll function
           LCDML.MENU_enScroll();
+          LCDML.FUNC_enableScreensaver();
         }
         LCDML.BT_resetEnter();
       }
-      else {
-        channel[idx].enabled = !channel[idx].enabled;
-      }
-    
-      LCDML.BT_resetAll();
+    }
+    return click_count;
+  }
+
+  return 0;
+}
+
+
+// *****************************************************************************
+// Select channel
+// *****************************************************************************
+void mDyn_ch_select(uint8_t line) {
+  
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      current = (current < (NUM_CHANNEL - 1)) ? current + 1 : 0;
+      LCDML.BT_resetUp();
+    }
+    if (LCDML.BT_checkDown()) {
+      current = (current > 0) ? current - 1 : (NUM_CHANNEL - 1);
+      LCDML.BT_resetDown();
     }
   }
 
-  String str(F("Channel"));
-  str += idx;
-  str += (channel[idx].enabled) ? F(": Enabled") : F(": Disabled");
-  u8g2.drawStr( LCDML_DISP_BOX_X0 + LCDML_DISP_FONT_W + LCDML_DISP_CUR_SPACE_BEHIND,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str());
+  String str(F("Channel "));
+  str += current;
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 8, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 1), LCDML_DISP_FONT_H - 1);
+  }
 }
 
 
 // *****************************************************************************
-// Set channel 0
+// Enable channel
 // *****************************************************************************
-void mDyn_channel_0 (uint8_t line) {
-  toggle(line, 0); 
+void mDyn_ch_enable(uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].enabled = !channel[current].enabled;
+    LCDML.BT_resetAll();
+  }
+
+  String str(F("Enabled :"));
+  str += (channel[current].enabled) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 10, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
+}
+
+// *****************************************************************************
+// Set start time
+// *****************************************************************************
+void mDyn_ch_start(uint8_t line) {
+  static uint8_t col_count = 0;
+  TimeElements dateTime;
+  breakTime( channel[current].time.getStartTime(), dateTime);
+//  dateTime.Hour = channel[current].time.getStartTime() / 3600;
+//  dateTime.Minute = channel[current].time.getStartTime() % 3600 / 60;
+
+  if (isSelected(line, 3)) {
+    col_count = (isSelected(line, 3) * 3) - 3;
+
+    if (LCDML.BT_checkUp()) {
+      switch (isSelected(line, 3)) {
+        case 1:
+          dateTime.Hour   = (dateTime.Hour   < 23) ? (dateTime.Hour   + 1 ) : (dateTime.Hour   - 23);
+          break;
+        case 2:
+          dateTime.Minute = (dateTime.Minute < 59) ? (dateTime.Minute + 1 ) : (dateTime.Minute - 59);
+          break;
+        case 3:
+          dateTime.Second = (dateTime.Second < 59) ? (dateTime.Second + 1 ) : (dateTime.Second - 59);
+          break;
+        default:
+          ;
+      }
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      switch (isSelected(line, 3)) {
+        case 1:
+          dateTime.Hour   = (dateTime.Hour   >= 1 ) ? (dateTime.Hour   - 1 ) : (dateTime.Hour   + 23);
+          break;
+        case 2:
+          dateTime.Minute = (dateTime.Minute >= 1 ) ? (dateTime.Minute - 1 ) : (dateTime.Minute + 59);
+          break;
+        case 3:
+          dateTime.Second = (dateTime.Second >= 1 ) ? (dateTime.Second - 1 ) : (dateTime.Second + 59);
+          break;
+        default:
+          ;
+      }
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[18];
+  sprintf (buf, "Start   :%02d:%02d:%02d", dateTime.Hour, dateTime.Minute, dateTime.Second);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line, 3)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 2), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].time.setStartTime(dateTime.Hour, dateTime.Minute, dateTime.Second);
 }
 
 
 // *****************************************************************************
-// Set channel 1
+// Set duration
 // *****************************************************************************
-void mDyn_channel_1 (uint8_t line) {
-  toggle(line, 1); 
+void mDyn_ch_duration(uint8_t line) {
+  static uint8_t col_count = 0;
+  uint32_t duration = channel[current].time.duration / 60.0;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      duration = (duration < 999) ? duration + 1 : 999;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      duration = (duration > 0) ? duration - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[13];
+  sprintf (buf, "Duration:%03d", duration);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 3), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].time.duration = duration * 60.0;
+}
+
+
+void mDyn_ch_flow (uint8_t line) {
+  static uint8_t col_count = 0;
+  uint32_t count = channel[current].flow.count;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      count = (count < 9990) ? count + 10 : 9999;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      count = (count > 9) ? count - 10 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[14];
+  sprintf (buf, "Quantity:%04d", count);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].flow.count = count;
+}
+
+// *****************************************************************************
+// Moisture
+// *****************************************************************************
+void mDyn_moist_enable (uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].moisture.enabled = !channel[current].moisture.enabled;
+    LCDML.BT_resetAll();
+  }
+
+  String str(F("Enabled :"));
+  str += (channel[current].moisture.enabled) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
+}
+
+void mDyn_moist_invert (uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].moisture.inverted = !channel[current].moisture.inverted;
+    LCDML.BT_resetAll();
+  }
+
+  String str(F("Inverted:"));
+  str += (channel[current].moisture.inverted) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
+}
+
+void mDyn_moist_low (uint8_t line) {
+  static uint8_t col_count = 0;
+  uint16_t threshold = channel[current].moisture.threshold_low;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      threshold = (threshold > 0) ? threshold - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[13];
+  sprintf (buf, "Low     :%04d", threshold);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].moisture.threshold_low = threshold;
+}
+
+void mDyn_moist_high (uint8_t line) {
+  static uint8_t col_count = 0;
+  uint16_t threshold = channel[current].moisture.threshold_high;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      threshold = (threshold > 0) ? threshold - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[13];
+  sprintf (buf, "High    :%04d", threshold);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].moisture.threshold_high = threshold;
 }
 
 
 // *****************************************************************************
-// Set channel 2
+// Rain
 // *****************************************************************************
-void mDyn_channel_2 (uint8_t line) {
-  toggle(line, 2); 
+void mDyn_rain_enable (uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].rain.enabled = !channel[current].rain.enabled;
+    LCDML.BT_resetAll();
+  }
+
+  String str(F("Enabled :"));
+  str += (channel[current].rain.enabled) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
+}
+
+void mDyn_rain_invert (uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].rain.inverted = !channel[current].rain.inverted;
+    LCDML.BT_resetAll();
+  }
+
+  String str(F("Inverted:"));
+  str += (channel[current].rain.inverted) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
+}
+
+void mDyn_rain_low (uint8_t line) {
+  static uint8_t col_count = 0;
+  uint16_t threshold = channel[current].rain.threshold_low;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      threshold = (threshold > 0) ? threshold - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[13];
+  sprintf (buf, "Low     :%04d", threshold);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].rain.threshold_low = threshold;
+}
+
+void mDyn_rain_high (uint8_t line) {
+  static uint8_t col_count = 0;
+  uint16_t threshold = channel[current].rain.threshold_high;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      threshold = (threshold > 0) ? threshold - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[13];
+  sprintf (buf, "High    :%04d", threshold);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].rain.threshold_high = threshold;
 }
 
 
 // *****************************************************************************
-// Set channel 3
+// Brightness
 // *****************************************************************************
-void mDyn_channel_3 (uint8_t line) {
-  toggle(line, 3); 
+void mDyn_bright_enable (uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].brightness.enabled = !channel[current].brightness.enabled;
+    LCDML.BT_resetAll();
+  }
+
+  String str(F("Enabled :"));
+  str += (channel[current].brightness.enabled) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
+}
+
+void mDyn_bright_invert (uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].brightness.inverted = !channel[current].brightness.inverted;
+    LCDML.BT_resetAll();
+  }
+
+  String str(F("Inverted:"));
+  str += (channel[current].brightness.inverted) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
+}
+
+void mDyn_bright_low (uint8_t line) {
+  static uint8_t col_count = 0;
+  uint16_t threshold = channel[current].brightness.threshold_low;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      threshold = (threshold > 0) ? threshold - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[13];
+  sprintf (buf, "Low     :%04d", threshold);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].brightness.threshold_low = threshold;
+}
+
+void mDyn_bright_high (uint8_t line) {
+  static uint8_t col_count = 0;
+  uint16_t threshold = channel[current].brightness.threshold_high;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      threshold = (threshold > 0) ? threshold - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[13];
+  sprintf (buf, "High    :%04d", threshold);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].brightness.threshold_high = threshold;
 }
 
 
 // *****************************************************************************
-// Set channel 4
+// Movement
 // *****************************************************************************
-void mDyn_channel_4 (uint8_t line) {
-  toggle(line, 4); 
+void mDyn_move_enable (uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].movement.enabled = !channel[current].movement.enabled;
+    LCDML.BT_resetAll();
+  }
+
+  String str(F("Enabled :"));
+  str += (channel[current].movement.enabled) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
 }
 
+void mDyn_move_invert (uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line) && LCDML.BT_checkAny()) {
+    channel[current].movement.inverted = !channel[current].movement.inverted;
+    LCDML.BT_resetAll();
+  }
 
-// *****************************************************************************
-// Set channel 5
-// *****************************************************************************
-void mDyn_channel_5 (uint8_t line) {
-  toggle(line, 5); 
+  String str(F("Inverted:"));
+  str += (channel[current].movement.inverted) ? F("True") : F("False");
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
+  }
 }
 
+void mDyn_move_wait (uint8_t line) {
+  static uint8_t col_count = 0;
+  uint32_t duration = channel[current].movement.delay;
 
-// *****************************************************************************
-// Set channel 6
-// *****************************************************************************
-void mDyn_channel_6 (uint8_t line) {
-  toggle(line, 6); 
-}
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      duration = (duration < 999) ? duration + 1 : 999;
+      LCDML.BT_resetUp();
+    }
 
+    if (LCDML.BT_checkDown()) {
+      duration = (duration > 0) ? duration - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
 
-// *****************************************************************************
-// Set channel 7
-// *****************************************************************************
-void mDyn_channel_7 (uint8_t line) {
-  toggle(line, 7); 
+  char buf[13];
+  sprintf (buf, "Duration:%04d", duration);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].movement.delay = duration;
 }
 

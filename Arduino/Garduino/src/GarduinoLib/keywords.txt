@@ -6,8 +6,8 @@
 # Class (KEYWORD1)
 #######################################
 
-FileConfig	KEYWORD1
-~FileConfig	KEYWORD1
+GarduinoLib		KEYWORD1
+~GarduinoLib	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
