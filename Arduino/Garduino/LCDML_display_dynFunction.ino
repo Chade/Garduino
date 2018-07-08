@@ -4,6 +4,15 @@
 //
 // =============================================================================
 
+
+// *****************************************************************************
+// Global variables
+// *****************************************************************************
+
+// Current channel
+byte current = 0;
+
+
 // *****************************************************************************
 // Helper
 // *****************************************************************************
@@ -14,7 +23,11 @@ uint8_t isSelected(const uint8_t& cursorPos, const uint8_t& count = 1) {
       if (LCDML.BT_checkEnter()) {
         click_count = (click_count < count) ? click_count + 1 : 0;
 
-        if (LCDML.MENU_getScrollDisableStatus() == 0) {
+        if (count == 0) {
+          LCDML.BT_resetEnter();
+          return 1;
+        }
+        else if (LCDML.MENU_getScrollDisableStatus() == 0) {
           // This function can only be called in a menu, not in a menu function
           LCDML.MENU_disScroll();
           LCDML.FUNC_disableScreensaver();
@@ -22,7 +35,7 @@ uint8_t isSelected(const uint8_t& cursorPos, const uint8_t& count = 1) {
         else if(click_count == 0) {
           // Enable the normal menu scroll function
           LCDML.MENU_enScroll();
-          LCDML.FUNC_enableScreensaver();
+          //LCDML.FUNC_enableScreensaver();
         }
         LCDML.BT_resetEnter();
       }
@@ -66,17 +79,76 @@ void mDyn_ch_select(uint8_t line) {
 void mDyn_ch_enable(uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
-    channel[current].enabled = !channel[current].enabled;
+    if (channel[current].enabled && !channel[current].skip) {
+      channel[current].skip = true;
+    }
+    else {
+      channel[current].enabled = !channel[current].enabled;
+      channel[current].skip = false;
+    }
     LCDML.BT_resetAll();
   }
 
   String str(F("Enabled :"));
-  str += (channel[current].enabled) ? F("True") : F("False");
+  if (channel[current].skip) {
+    str += F("Skip");
+  }
+  else {
+    str += (channel[current].enabled) ? F("True") : F("False");
+  }
+  
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
   if(isSelected(line)) {
     u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 10, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
   }
 }
+
+
+// *****************************************************************************
+// Skip next execution
+// *****************************************************************************
+void mDyn_ch_skip(uint8_t line) {
+  String elements;
+  byte skipcount = 0;
+  for (byte i = 0; i < NUM_CHANNEL; i++) {
+    if (channel[i].skip) {
+      skipcount++;
+      elements += i;
+      elements += ' ';
+    }
+  }
+  
+  // Skip next execution cycle
+  if (isSelected(line, 0)) {
+    if (skipcount == 4) {
+      skipcount = 0;
+      for (byte i = 0; i < NUM_CHANNEL; i++) {
+        channel[i].skip = false;
+      }
+    }
+    else {
+      skipcount = 4;
+      for (byte i = 0; i < NUM_CHANNEL; i++) {
+        channel[i].skip = true;
+      }
+    }
+    LCDML.BT_resetAll();
+  }
+  
+  String str;
+  if (skipcount == 0) {
+    str = "Skip:None";
+  }
+  else if (skipcount == NUM_CHANNEL) {
+    str = "Skip:All";
+  }
+  else {
+    str = "Skip:[ " + elements + "]";
+  }
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
+}
+
 
 // *****************************************************************************
 // Set start time

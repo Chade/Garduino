@@ -42,7 +42,7 @@
  */
 
 
-#define ENCODER_OPTIMIZE_INTERRUPTS //Only when using pin2/3 (or 20/21 on mega)
+//#define ENCODER_OPTIMIZE_INTERRUPTS //Only when using pin2/3 (or 20/21 on mega)
 #include <Encoder.h> //for Encoder    Download:  https://github.com/PaulStoffregen/Encoder
 
 Encoder encoder(ENCODER_A_PIN, ENCODER_B_PIN);

@@ -5,11 +5,33 @@
 // =============================================================================
 
 
+// *****************************************************************************
+// Global variables
+// *****************************************************************************
+
+unsigned long timer = 0;
+
+File dataFile;
 
 
 // *****************************************************************************
 // Helper
 // *****************************************************************************
+
+void progressBar(const byte& percent, const byte& row = 0) {
+  byte pos = constrain(percent, 0, 100);
+  pos = map(pos, 0, 100, 1, 14);
+
+  char bar[20];
+  sprintf(bar, "[             ]%3d%%", percent);
+  for(byte i = 1; i < pos; i++) {
+    bar[i] = '=';
+  }
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * row), bar);
+  u8g2.drawFrame( LCDML_DISP_BOX_X0, LCDML_DISP_BOX_Y0, (LCDML_DISP_BOX_X1 - LCDML_DISP_BOX_X0), (LCDML_DISP_BOX_Y1 - LCDML_DISP_BOX_Y0) );
+}
+
 void timeMenu(TimeElements& tm, unsigned long& tmr) {
   static bool blink = true;
   static bool modify = false;
@@ -200,7 +222,6 @@ void mFunc_set_interval(uint8_t param) {
   static uint8_t col_count = 0;
   static uint8_t row_count = 0;
   static TimeElements dateTime;
-  static unsigned long timer = 0;
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
@@ -366,12 +387,12 @@ void mFunc_set_interval(uint8_t param) {
   }
 }
 
+
 // *****************************************************************************
 // Set time
 // *****************************************************************************
 void mFunc_ch_time(uint8_t param) {
   static TimeElements dateTime;
-  static unsigned long timer = 0;
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
@@ -399,7 +420,6 @@ void mFunc_ch_time(uint8_t param) {
 // *****************************************************************************
 void mFunc_ch_duration(uint8_t param) {
   static TimeElements dateTime;
-  static unsigned long timer = 0;
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
@@ -431,7 +451,6 @@ void mFunc_set_clock(uint8_t param) {
   static uint8_t col_count = 0;
   static uint8_t row_count = 0;
   static TimeElements dateTime;
-  static unsigned long timer = 0;
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
@@ -593,16 +612,17 @@ void mFunc_set_clock(uint8_t param) {
 
   if(LCDML.FUNC_close())      // ****** END *********
   {
+    RTC.set(makeTime(dateTime));
     setTime(makeTime(dateTime));
   }
 }
+
 
 // *****************************************************************************
 // Set global time
 // *****************************************************************************
 void mFunc_set_time(uint8_t param) {
   static TimeElements dateTime;
-  static unsigned long timer = 0;
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
@@ -629,7 +649,6 @@ void mFunc_set_time(uint8_t param) {
 // *****************************************************************************
 void mFunc_set_date(uint8_t param) {
   static TimeElements dateTime;
-  static unsigned long timer = 0;
   
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
@@ -651,6 +670,97 @@ void mFunc_set_date(uint8_t param) {
     dateTime.Minute = minute(t);
     dateTime.Second = second(t);
     setTime(makeTime(dateTime));
+  }
+}
+
+
+// *****************************************************************************
+// Read config from SD
+// *****************************************************************************
+void mFunc_readSD(uint8_t param) {
+  static byte index = 0;
+  
+  if (LCDML.FUNC_setup())     // ****** Setup *********
+  {
+    LCDML.FUNC_disableScreensaver();
+    LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+
+    index = 0;
+  }
+
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
+  {
+    u8g2.setFont(LCDML_DISP_FONT);
+    u8g2.firstPage();
+    do {
+      u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), String(F("Reading from SD")).c_str());
+      progressBar((index * 100) / NUM_CHANNEL, 2);
+    } while( u8g2.nextPage() );
+
+    if(index < NUM_CHANNEL) {
+      if(parseConfig(index)) {
+        index++;
+      }
+      else{
+        Serial.println(F("Could not read from SD"));
+      }
+    }
+    else {
+      LCDML.MENU_goRoot();
+    }
+  }
+
+  if(LCDML.FUNC_close())      // ****** STABLE END *********
+  {
+    
+  }
+}
+
+
+// *****************************************************************************
+// Write config to SD
+// *****************************************************************************
+void mFunc_writeSD(uint8_t param) {
+  static byte index = 0;
+  
+  if (LCDML.FUNC_setup())     // ****** Setup *********
+  {
+    LCDML.FUNC_disableScreensaver();
+    LCDML.TIMER_msReset(timer);
+    LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+    
+    index = 0;
+    dataFile = SD.open(BACKUP_NAME, (O_WRITE | O_CREAT | O_TRUNC));
+  }
+
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
+  {
+    u8g2.setFont(LCDML_DISP_FONT);
+    u8g2.firstPage();
+    do {
+      u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), String(F("Saving to SD")).c_str());
+      progressBar((index * 100) / NUM_CHANNEL, 2);
+    } while( u8g2.nextPage() );
+    
+    if (LCDML.TIMER_ms(timer, 1000)) {
+      if(index >= NUM_CHANNEL) {
+        LCDML.MENU_goRoot();
+      }
+      
+      if(dataFile) {
+        String header(F("Channel"));
+        header.concat(index);
+        channel[index].print(Serial, header);
+        channel[index].print(dataFile, header);
+        index++;
+      }
+      timer = millis();
+    }    
+  }
+
+  if(LCDML.FUNC_close())      // ****** STABLE END *********
+  {
+    dataFile.close();
   }
 }
 
@@ -679,16 +789,16 @@ void mFunc_home(uint8_t param) {
       u8g2.setFont(LCDML_DISP_FONT);
       u8g2.firstPage();
       do {
-        u8g2.drawStr(LCDML_DISP_FONT_W * 6, (LCDML_DISP_FONT_H * 2), date_buf);
-        u8g2.drawStr(LCDML_DISP_FONT_W * 7, (LCDML_DISP_FONT_H * 3), time_buf);
+        u8g2.drawStr(34, (LCDML_DISP_FONT_H * 1), date_buf);
+        u8g2.drawStr(40, (LCDML_DISP_FONT_H * 2), time_buf);
       } while( u8g2.nextPage() );
     }
     else {
       u8g2.setFont(LCDML_DISP_FONT);
       u8g2.firstPage();
       do {
-        u8g2.drawStr( LCDML_DISP_FONT_W * 4, (LCDML_DISP_FONT_H * 2), "Date not set!");
-        u8g2.drawStr( LCDML_DISP_FONT_W * 4, (LCDML_DISP_FONT_H * 3), "Time not set!");
+        u8g2.drawStr( 25, (LCDML_DISP_FONT_H * 1), "Date not set!");
+        u8g2.drawStr( 25, (LCDML_DISP_FONT_H * 2), "Time not set!");
       } while( u8g2.nextPage() );
     }
 
@@ -705,6 +815,7 @@ void mFunc_home(uint8_t param) {
     LCDML.MENU_goRoot();
   }
 }
+
 
 // *****************************************************************************
 // Back
