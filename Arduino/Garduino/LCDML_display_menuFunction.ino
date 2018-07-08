@@ -216,6 +216,7 @@ void mFunc_readSD(uint8_t param) {
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
+    Serial.print(F("Parsing config file"));
     LCDML.FUNC_disableScreensaver();
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
 
@@ -233,6 +234,7 @@ void mFunc_readSD(uint8_t param) {
     else {
       if(index < NUM_CHANNEL) {
         if(parseConfig(index)) {
+          Serial.print('.');
           sdStatus = F("Reading from SD");
           index++;
         }
@@ -241,6 +243,7 @@ void mFunc_readSD(uint8_t param) {
         }
       }
       else {
+        Serial.println(F("Done"));
         LCDML.MENU_goRoot();
       }
     }
@@ -275,7 +278,6 @@ void mFunc_writeSD(uint8_t param) {
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
-    Serial.print(F("Parsing config file"));
     LCDML.FUNC_disableScreensaver();
     LCDML.TIMER_msReset(timer);
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
@@ -299,7 +301,6 @@ void mFunc_writeSD(uint8_t param) {
       else {
         sdStatus = F("Saving to SD");
         if (LCDML.TIMER_ms(timer, 1000)) {
-          Serial.print('.');
           if(index < NUM_CHANNEL) {
             String header(F("Channel"));
             header.concat(index);
@@ -326,7 +327,6 @@ void mFunc_writeSD(uint8_t param) {
   if(LCDML.FUNC_close())      // ****** STABLE END *********
   {
     dataFile.close();
-    Serial.println(F("Done"));
   }
 }
 
