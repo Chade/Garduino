@@ -62,7 +62,7 @@ LCDML_createMenu(LCDML_DISP_COUNT);
 
 void initMenu() {
   u8g2.begin();
-  
+
   // LCDMenuLib Setup
   LCDML_setup(LCDML_DISP_COUNT);
 

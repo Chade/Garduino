@@ -91,31 +91,31 @@
 
 class Switch {
 public:
-  bool enabled;
-  bool inverted;
-  byte input;
+  bool enabled = false;
+  bool inverted = false;
+  byte input = 0;
 
 public:
   bool isEnabled(){
     return enabled;
   }
-  
+
   void enable(const bool& value){
     enabled = value;
   }
-  
+
   bool isInverted(){
     return inverted;
   }
-  
+
   void invert(const bool& value){
     inverted = value;
   }
-  
+
   byte getPin(){
     return input;
   }
-  
+
   void setPin(const byte& pin){
     input = pin;
   }
@@ -135,10 +135,10 @@ public:
 
 class Timer {
 public:
-  time_t start_time;
-  time_t duration;
+  time_t start_time = 0;
+  time_t duration = 0;
 
-public:  
+public:
   void print(Stream &stream, const String &name) {
     stream.print(name);
     stream.print(F("Start = "));
@@ -147,7 +147,7 @@ public:
     stream.print(F("Duration = "));
     stream.println(fromTime(duration));
   }
-  
+
   bool active(const time_t& now) {
     return (elapsedSecsToday(now) >= start_time) && ((elapsedSecsToday(now) < start_time + duration) || (duration == 0));
   }
@@ -155,11 +155,11 @@ public:
   void setStartTime(const uint8_t& hour, const uint8_t& minute, const uint8_t& second){
     start_time = hour * SECS_PER_HOUR + minute * SECS_PER_MIN + second;
   }
-  
+
   void setStartTime(const time_t& time){
     start_time = time;
   }
-  
+
   time_t getStartTime(){
     return start_time;
   }
@@ -167,15 +167,15 @@ public:
 
 class Counter {
 public:
-  uint32_t start_count;
-  uint32_t count;
+  uint32_t start_count = 0;
+  uint32_t count = 0;
 
   void print(Stream &stream, const String &name) {
     stream.print(name);
     stream.print(F("Count = "));
     stream.println(count);
   }
-  
+
   bool active(const volatile unsigned long& current){
     return (current - start_count) < count;
   }
@@ -183,17 +183,17 @@ public:
 
 class DigitalSwitch : public Switch {
 public:
-  uint32_t delay;
-  
+  uint32_t delay = 0;
+
 public:
   void print(Stream &stream, const String &name) {
     Switch::print(stream, name);
   }
-  
+
   bool active(){
     return getValue() ^ isInverted();
   }
-  
+
   bool getValue(){
     return digitalRead(getPin());
   }
@@ -223,7 +223,7 @@ public:
     }
     return isInverted();
   }
-  
+
   int getValue(){
     return analogRead(getPin());
   }
@@ -231,11 +231,11 @@ public:
 
 class Channel {
 public:
-  bool enabled;
-  bool active;
-  bool was_active;
-  bool skip;
-  byte output;
+  bool enabled = false;
+  bool active = false;
+  bool was_active = false;
+  bool skip = false;
+  byte output = 0;
 
   Timer time;
   Counter flow;
@@ -248,15 +248,15 @@ public:
   bool enable(const bool& value){
     enabled = value;
   }
-  
+
   bool isEnabled(){
     return enabled;
   }
-  
+
   void print(Stream &stream, const String &name) {
     stream.println("################################################################################");
     stream.println();
-        
+
     stream.print('[');
     stream.print(name);
     stream.println(']');
@@ -275,7 +275,7 @@ public:
 
 	movement.print(stream, "Movement");
     stream.println();
-	
+
     moisture.print(stream, "Moisture");
     stream.println();
 

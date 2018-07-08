@@ -51,7 +51,7 @@ uint8_t isSelected(const uint8_t& cursorPos, const uint8_t& count = 1) {
 // Select channel
 // *****************************************************************************
 void mDyn_ch_select(uint8_t line) {
-  
+
   // Check if this function is active (cursor is on this line)
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
@@ -96,7 +96,7 @@ void mDyn_ch_enable(uint8_t line) {
   else {
     str += (channel[current].enabled) ? F("True") : F("False");
   }
-  
+
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), str.c_str() );
   if(isSelected(line)) {
     u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 10, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 5), LCDML_DISP_FONT_H - 1);
@@ -117,7 +117,7 @@ void mDyn_ch_skip(uint8_t line) {
       elements += ' ';
     }
   }
-  
+
   // Skip next execution cycle
   if (isSelected(line, 0)) {
     if (skipcount == 4) {
@@ -134,7 +134,7 @@ void mDyn_ch_skip(uint8_t line) {
     }
     LCDML.BT_resetAll();
   }
-  
+
   String str;
   if (skipcount == 0) {
     str = "Skip:None";

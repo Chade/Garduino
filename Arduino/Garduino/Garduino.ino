@@ -52,6 +52,9 @@ unsigned long delayCounter = 0;
 // Counter for menu clicks
 byte click_count = 0;
 
+// SD initialized
+volatile bool sdReady = false;
+
 
 // *****************************************************************************
 // Functions
@@ -64,35 +67,35 @@ bool parseConfig(const byte& idx){
     String value;
     String header(F("Channel"));
     header.concat(idx);
-    
+
     value = configFile.getValue(F("Enabled"), header);
     channel[idx].enabled = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("OutputPin"), header);
     channel[idx].output = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("TimeStart"), header);
     channel[idx].time.start_time = toSeconds(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("TimeDuration"), header);
     channel[idx].time.duration = toSeconds(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("FlowCount"), header);
     channel[idx].flow.count = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("MovementEnabled"), header);
     channel[idx].movement.enabled = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("MovementInvert"), header);
     channel[idx].movement.inverted = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("MovementPin"), header);
     channel[idx].movement.input = value.toInt();
     //Serial.println(value);
@@ -100,67 +103,67 @@ bool parseConfig(const byte& idx){
     value = configFile.getValue(F("MovementDelay"), header);
     channel[idx].movement.delay = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("MoistureEnabled"), header);
     channel[idx].moisture.enabled = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("MoistureInvert"), header);
     channel[idx].moisture.inverted = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("MoisturePin"), header);
     channel[idx].moisture.input = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("MoistureThresholdLow"), header);
     channel[idx].moisture.threshold_low = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("MoistureThresholdHigh"), header);
     channel[idx].moisture.threshold_high = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("RainEnabled"), header);
     channel[idx].rain.enabled = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("RainInvert"), header);
     channel[idx].rain.inverted = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("RainPin"), header);
     channel[idx].rain.input = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("RainThresholdLow"), header);
     channel[idx].rain.threshold_low = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("RainThresholdHigh"), header);
     channel[idx].rain.threshold_high = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("BrightnessEnabled"), header);
     channel[idx].brightness.enabled = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("BrightnessInvert"), header);
     channel[idx].brightness.inverted = toBool(value);
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("BrightnessPin"), header);
     channel[idx].brightness.input = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("BrightnessThresholdLow"), header);
     channel[idx].brightness.threshold_low = value.toInt();
     //Serial.println(value);
-    
+
     value = configFile.getValue(F("BrightnessThresholdHigh"), header);
     channel[idx].brightness.threshold_high = value.toInt();
     //Serial.println(value);
-  
+
     configFile.close();
     return true;
   }
@@ -180,6 +183,13 @@ bool parseConfig() {
 
 void flowCounterInterrupt() {
   flowCounter += 1;
+}
+
+void sdDetectInterrupt() {
+  if (sdReady) {
+    sdReady = false;
+    SD.end();
+  }
 }
 
 
@@ -211,37 +221,13 @@ void setup() {
     Serial.println(F("Done"));
   }
 
-  // Initialize SD Card
-  Serial.print(F("Initializing SD card..."));
-  while (!SD.begin(SD_CS_PIN)) {
-    Serial.print('.');
-    updateMenu();
-    delay(1000);
-  }
-  Serial.println(F("Done"));
+  // Attach sd card detection interrupt
+  attachInterrupt(digitalPinToInterrupt(SD_CD_PIN), sdDetectInterrupt, FALLING);
 
   // Parse config file
-  Serial.print(F("Parsing config file..."));
-  /*
-  if(parseConfig()) {
-    Serial.println(F("Done"));
-  }*/
-  if(LCDML.OTHER_jumpToFunc(mFunc_readSD)) {
-    Serial.println(F("Done"));
+  if(!LCDML.OTHER_jumpToFunc(mFunc_readSD)) {
+    Serial.println(F("Parsing config file...Failed"));
   }
-  else {
-    Serial.println(F("...Failed"));
-  }
-
-  // Set up IOs
-  Serial.print(F("Setting up I/Os"));
-  for (byte i = 0; i < NUM_CHANNEL; i++) {
-    Serial.print('.');
-    pinMode(channel[i].output, OUTPUT);
-  }
-  attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
-  Serial.println(F("Done"));
-
 }
 
 
@@ -250,9 +236,6 @@ void setup() {
 // *****************************************************************************
 
 void loop() {
-  // Get current time
-  //now = rtc.now();
-
   for (byte i = 0; i < NUM_CHANNEL; i++) {
     if (channel[i].enabled) {
       // Check timer
