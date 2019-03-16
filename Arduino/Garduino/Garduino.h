@@ -19,10 +19,6 @@
 #define SD_CD_PIN                    3
 #define SD_CS_PIN                    53
 #define LCD_CS_PIN                   49
-#define RELAY1_PIN                   4
-#define RELAY2_PIN                   5
-#define RELAY3_PIN                   6
-#define RELAY4_PIN                   7
 #define MOISTURE_PIN                 A0
 #define RAIN_PIN                     A1
 #define BRIGHTNESS_PIN               A2
@@ -80,7 +76,7 @@
 // General
 // *****************************************************************************
 
-#define NUM_CHANNEL                  4
+#define NUM_CHANNEL                  8
 #define FILE_NAME                    "config.txt"
 #define BACKUP_NAME                  "backup.txt"
 
