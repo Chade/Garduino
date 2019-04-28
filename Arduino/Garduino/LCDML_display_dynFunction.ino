@@ -120,14 +120,14 @@ void mDyn_ch_skip(uint8_t line) {
 
   // Skip next execution cycle
   if (isSelected(line, 0)) {
-    if (skipcount == 4) {
+    if (skipcount == NUM_CHANNEL) {
       skipcount = 0;
       for (byte i = 0; i < NUM_CHANNEL; i++) {
         channel[i].skip = false;
       }
     }
     else {
-      skipcount = 4;
+      skipcount = NUM_CHANNEL;
       for (byte i = 0; i < NUM_CHANNEL; i++) {
         channel[i].skip = true;
       }
@@ -581,4 +581,3 @@ void mDyn_move_wait (uint8_t line) {
   }
   channel[current].movement.delay = duration;
 }
-

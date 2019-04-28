@@ -46,11 +46,13 @@
   LCDML_addAdvanced (33, LCDML_0_4    ,   1, NULL                , "Set Clock"       , mFunc_set_clock   , 0    , _LCDML_TYPE_default  );
   LCDML_addAdvanced (34, LCDML_0_4    ,   2, NULL                , "Read from SD"    , mFunc_readSD      , 0    , _LCDML_TYPE_default  );
   LCDML_addAdvanced (35, LCDML_0_4    ,   3, NULL                , "Write to SD"     , mFunc_writeSD     , 0    , _LCDML_TYPE_default  );
-  LCDML_addAdvanced (36, LCDML_0_4    ,   4, NULL                , "<Back>"          , mFunc_back        , 0    , _LCDML_TYPE_default  );
+  LCDML_addAdvanced (36, LCDML_0_4    ,   4, NULL                , "Read from EEPROM", mFunc_readEEPROM  , 0    , _LCDML_TYPE_default  );
+  LCDML_addAdvanced (37, LCDML_0_4    ,   5, NULL                , "Write to EEPROM" , mFunc_writeEEPROM , 0    , _LCDML_TYPE_default  );
+  LCDML_addAdvanced (38, LCDML_0_4    ,   6, NULL                , "<Back>"          , mFunc_back        , 0    , _LCDML_TYPE_default  );
 
 // Menu element count
 // This value must be the same as the last menu element
-#define LCDML_DISP_COUNT 36
+#define LCDML_DISP_COUNT 38
 
 // Create menu
 LCDML_createMenu(LCDML_DISP_COUNT);

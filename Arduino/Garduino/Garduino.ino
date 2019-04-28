@@ -3,6 +3,8 @@
 #include <SPI.h>
 #include <SD.h>
 
+#include <EEPROM.h>
+
 #include <Wire.h>
 #include <DS1307RTC.h>
 
@@ -74,6 +76,14 @@ bool parseConfig(const byte& idx){
 
     value = configFile.getValue(F("OutputPin"), header);
     channel[idx].output = value.toInt();
+    //Serial.println(value);
+
+    value = configFile.getValue(F("InputPin"), header);
+    channel[idx].input = value.toInt();
+    //Serial.println(value);
+
+    value = configFile.getValue(F("SignalPin"), header);
+    channel[idx].signal = value.toInt();
     //Serial.println(value);
 
     value = configFile.getValue(F("TimeStart"), header);
@@ -225,9 +235,8 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(SD_CD_PIN), sdDetectInterrupt, FALLING);
 
   // Parse config file
-  if(!LCDML.OTHER_jumpToFunc(mFunc_readSD)) {
-    Serial.println(F("Parsing config file...Failed"));
-  }
+  //LCDML.OTHER_jumpToFunc(mFunc_readSD);
+  LCDML.OTHER_jumpToFunc(mFunc_readEEPROM);
 }
 
 
@@ -236,6 +245,9 @@ void setup() {
 // *****************************************************************************
 
 void loop() {
+  static unsigned long button_time = 0;
+  static byte button_prev = LOW;
+  
   for (byte i = 0; i < NUM_CHANNEL; i++) {
     if (channel[i].enabled) {
       // Check timer
@@ -285,9 +297,63 @@ void loop() {
       if (channel[i].active && channel[i].brightness.enabled) {
         channel[i].active &= channel[i].brightness.active();
       }
-
-      digitalWrite(channel[i].output, channel[i].active && !channel[i].skip);
     }
+
+    // Update buttons
+    if (channel[i].input != 0) {
+      if (digitalRead(channel[i].input) == HIGH && bitRead(button_prev, i) == LOW) {      // Rising edge = button pressed
+        bitWrite(button_prev, i, HIGH);
+        button_time = millis();
+      }
+      else if (digitalRead(channel[i].input) == HIGH && bitRead(button_prev, i) == HIGH && button_time != 0) {           // High = keeping button pressed
+        if ((millis() - button_time) >= CONTROL_BUTTON_LONG_PRESS) {
+          // Toggle enabled
+          button_time = 0;
+          channel[i].enabled = !channel[i].enabled;
+        }
+      }
+      else if (digitalRead(channel[i].input) == LOW && bitRead(button_prev, i) == HIGH) { // Falling edge = button released
+        bitWrite(button_prev, i, LOW);
+        unsigned long pressed =  millis() - button_time;
+        if (pressed >= CONTROL_BUTTON_SHORT_PRESS && pressed < CONTROL_BUTTON_LONG_PRESS) {
+          if (channel[i].enabled) {
+            // Toggle skip
+            channel[i].skip = !channel[i].skip;
+          }
+          else{
+            // Toggle skip
+            channel[i].active = !channel[i].active;
+          }
+        }
+      }
+    }
+
+    // Update signals
+    if (channel[i].signal != 0) {
+      if (channel[i].enabled) {
+        if (channel[i].skip) {
+          digitalWrite(channel[i].signal, (millis()%2000 < 200) );
+        }
+        else if (channel[i].time.active(now())) {
+          digitalWrite(channel[i].signal, (millis()%1000 < 500) );
+        }
+        else if (channel[i].time.preactive(now(), 60)) {
+          digitalWrite(channel[i].signal, (millis()%500 < 50));
+        }
+        else {
+          digitalWrite(channel[i].signal, HIGH);
+        }
+      }
+      else if (channel[i].active) {
+        digitalWrite(channel[i].signal, (millis()%1000 < 500) );
+      }
+      else {
+        digitalWrite(channel[i].signal, LOW);
+      }
+    }
+
+    // Set digital output
+    digitalWrite(channel[i].output, channel[i].active && !channel[i].skip);
   }
 
   // Update display

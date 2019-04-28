@@ -15,21 +15,41 @@
 // Pins
 // *****************************************************************************
 
-#define FLOW_PIN                     2
+// I2C
+#define SDA                          20
+#define SCL                          21
+// SPI
+#define MISO                         50
+#define MOSI                         51
+#define SCK                          52
+#define SS                           53
+// SD-Card
 #define SD_CD_PIN                    3
 #define SD_CS_PIN                    53
+// LCD
 #define LCD_CS_PIN                   49
+// Sensor
 #define MOISTURE_PIN                 A0
 #define RAIN_PIN                     A1
 #define BRIGHTNESS_PIN               A2
+#define FLOW_PIN                     2
 #define MOVEMENT_PIN                 3
-#define MOVEMENT_DECAY               60
 // Encoder
 #define ENCODER_A_PIN                19    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
 #define ENCODER_B_PIN                18    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
 #define ENCODER_BUTTON_PIN           17    // physical pin , use internal pullup
 #define EXTERNAL_BUTTON_PIN          24    // physical pin , use internal pullup
-
+// Buzzer
+#define BUZZER_PIN                   25
+// Buttons
+#define BUTTON1_PIN                  26
+#define BUTTON1_LED_PIN              30
+#define BUTTON2_PIN                  27
+#define BUTTON2_LED_PIN              31
+#define BUTTON3_PIN                  28
+#define BUTTON3_LED_PIN              32
+#define BUTTON4_PIN                  29
+#define BUTTON4_LED_PIN              33
 
 // *****************************************************************************
 // Delays
@@ -38,6 +58,8 @@
 #define CONTROL_BUTTON_DEBOUNCE      200   // ms
 #define CONTROL_BUTTON_LONG_PRESS    800   // ms
 #define CONTROL_BUTTON_SHORT_PRESS   120   // ms
+
+#define MOVEMENT_DECAY               60    // ms
 
 
 // *****************************************************************************
@@ -148,6 +170,10 @@ public:
     return (elapsedSecsToday(now) >= start_time) && ((elapsedSecsToday(now) < start_time + duration) || (duration == 0));
   }
 
+  bool preactive(const time_t& now, const time_t& in) {
+    return (elapsedSecsToday(now) + in >= start_time) && ((elapsedSecsToday(now) + in < start_time + duration) || (duration == 0));
+  }
+
   void setStartTime(const uint8_t& hour, const uint8_t& minute, const uint8_t& second){
     start_time = hour * SECS_PER_HOUR + minute * SECS_PER_MIN + second;
   }
@@ -232,6 +258,8 @@ public:
   bool was_active = false;
   bool skip = false;
   byte output = 0;
+  byte input = 0;
+  byte signal = 0;
 
   Timer time;
   Counter flow;
@@ -261,6 +289,10 @@ public:
     stream.println(fromBool(isEnabled()));
     stream.print(F("OutputPin = "));
     stream.println(output);
+    stream.print(F("InputPin = "));
+    stream.println(input);
+    stream.print(F("SignalPin = "));
+    stream.println(signal);
     stream.println();
 
     time.print(stream, "Time");
@@ -269,7 +301,7 @@ public:
     flow.print(stream, "Flow");
     stream.println();
 
-	movement.print(stream, "Movement");
+	  movement.print(stream, "Movement");
     stream.println();
 
     moisture.print(stream, "Moisture");

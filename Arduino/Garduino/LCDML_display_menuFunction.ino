@@ -259,10 +259,18 @@ void mFunc_readSD(uint8_t param) {
   if(LCDML.FUNC_close())      // ****** STABLE END *********
   {
     // Set up IOs
-    Serial.print(F("Setting up I/Os"));
+    Serial.print(F("Setup I/Os"));
     for (byte i = 0; i < NUM_CHANNEL; i++) {
       Serial.print('.');
-      pinMode(channel[i].output, OUTPUT);
+      if (channel[i].output != 0) {
+        pinMode(channel[i].output, OUTPUT);
+      }
+      if (channel[i].input != 0) {
+        pinMode(channel[i].input, INPUT);
+      }
+      if (channel[i].signal != 0) {
+        pinMode(channel[i].signal, OUTPUT);
+      }
     }
     attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
     Serial.println(F("Done"));
@@ -320,6 +328,113 @@ void mFunc_writeSD(uint8_t param) {
     u8g2.firstPage();
     do {
       u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), sdStatus.c_str());
+      progressBar((index * 100) / NUM_CHANNEL, 2);
+    } while( u8g2.nextPage() );
+  }
+
+  if(LCDML.FUNC_close())      // ****** STABLE END *********
+  {
+    dataFile.close();
+  }
+}
+
+
+// *****************************************************************************
+// Read config from EEPROM
+// *****************************************************************************
+void mFunc_readEEPROM(uint8_t param) {
+  static byte index = 0;
+
+  if (LCDML.FUNC_setup())     // ****** Setup *********
+  {
+    Serial.print(F("Read config"));
+    LCDML.FUNC_disableScreensaver();
+    LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+
+    index = 0;
+  }
+
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
+  {
+    String eepromStatus(F("Read from EEPROM"));
+    
+    if(index < NUM_CHANNEL) {
+      EEPROM.get(index * sizeof(Channel), channel[index]);
+      Serial.print('.');
+      index++;
+    }
+    else {
+      Serial.println(F("Done"));
+      LCDML.MENU_goRoot();
+    }
+
+    u8g2.setFont(LCDML_DISP_FONT);
+    u8g2.firstPage();
+    do {
+      u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), eepromStatus.c_str());
+      progressBar((index * 100) / NUM_CHANNEL, 2);
+    } while( u8g2.nextPage() );
+  }
+
+  if(LCDML.FUNC_close())      // ****** STABLE END *********
+  {
+    // Set up IOs
+    Serial.print(F("Setup I/Os"));
+    for (byte i = 0; i < NUM_CHANNEL; i++) {
+      Serial.print('.');
+      if (channel[i].output != 0) {
+        pinMode(channel[i].output, OUTPUT);
+      }
+      if (channel[i].input != 0) {
+        pinMode(channel[i].input, INPUT);
+      }
+      if (channel[i].signal != 0) {
+        pinMode(channel[i].signal, OUTPUT);
+      }
+    }
+    attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
+    Serial.println(F("Done"));
+  }
+}
+
+
+// *****************************************************************************
+// Write config to EEPROM
+// *****************************************************************************
+void mFunc_writeEEPROM(uint8_t param) {
+  static byte index = 0;
+
+  if (LCDML.FUNC_setup())     // ****** Setup *********
+  {
+    LCDML.FUNC_disableScreensaver();
+    LCDML.TIMER_msReset(timer);
+    LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
+
+    index = 0;
+  }
+
+  if(LCDML.FUNC_loop())       // ****** LOOP *********
+  {
+    String eepromStatus(F("Write to EEPROM"));
+
+    if (LCDML.TIMER_ms(timer, 1000)) {
+      if(index < NUM_CHANNEL) {
+        String header(F("Channel"));
+        header.concat(index);
+        channel[index].print(Serial, header);
+        EEPROM.put(index*sizeof(Channel), channel[index]);
+        index++;
+      }
+      else {
+        LCDML.MENU_goRoot();
+      }
+      timer = millis();
+    }
+
+    u8g2.setFont(LCDML_DISP_FONT);
+    u8g2.firstPage();
+    do {
+      u8g2.drawStr( LCDML_DISP_FRAME_OFFSET, (LCDML_DISP_FONT_H * 1), eepromStatus.c_str());
       progressBar((index * 100) / NUM_CHANNEL, 2);
     } while( u8g2.nextPage() );
   }
@@ -432,5 +547,3 @@ void mFunc_back(uint8_t param) {
     LCDML.FUNC_goBackToMenu(1);      // leave this function and go a layer back
   }
 }
-
-
