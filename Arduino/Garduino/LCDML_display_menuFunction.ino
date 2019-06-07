@@ -258,22 +258,7 @@ void mFunc_readSD(uint8_t param) {
 
   if(LCDML.FUNC_close())      // ****** STABLE END *********
   {
-    // Set up IOs
-    Serial.print(F("Setup I/Os"));
-    for (byte i = 0; i < NUM_CHANNEL; i++) {
-      Serial.print('.');
-      if (channel[i].output != 0) {
-        pinMode(channel[i].output, OUTPUT);
-      }
-      if (channel[i].input != 0) {
-        pinMode(channel[i].input, INPUT);
-      }
-      if (channel[i].signal != 0) {
-        pinMode(channel[i].signal, OUTPUT);
-      }
-    }
-    attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
-    Serial.println(F("Done"));
+    setupIOs();
   }
 }
 
@@ -378,22 +363,7 @@ void mFunc_readEEPROM(uint8_t param) {
 
   if(LCDML.FUNC_close())      // ****** STABLE END *********
   {
-    // Set up IOs
-    Serial.print(F("Setup I/Os"));
-    for (byte i = 0; i < NUM_CHANNEL; i++) {
-      Serial.print('.');
-      if (channel[i].output != 0) {
-        pinMode(channel[i].output, OUTPUT);
-      }
-      if (channel[i].input != 0) {
-        pinMode(channel[i].input, INPUT);
-      }
-      if (channel[i].signal != 0) {
-        pinMode(channel[i].signal, OUTPUT);
-      }
-    }
-    attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
-    Serial.println(F("Done"));
+    setupIOs();
   }
 }
 
@@ -481,6 +451,10 @@ void mFunc_home(uint8_t param) {
       timeOffset = 25;
     }
 
+  // Display current flow
+   String flowString(F("Liter : "));
+   flowString.concat(flowCounter / FLOW_CONV);
+
    // Display current execution on homescreen
    String activeString(F("Active:"));
    for(byte i = 0; i < NUM_CHANNEL; i++) {
@@ -494,8 +468,8 @@ void mFunc_home(uint8_t param) {
     byte nextChannel = -1;
     time_t nextExec = -1;
     for(byte i = 0; i < NUM_CHANNEL; i++) {
-      time_t currentExec = channel[i].time.start_time;
-      if(channel[i].time.start_time < elapsedSecsToday(now())) {
+      time_t currentExec = channel[i].time.getNextStartTime(now());
+      if(currentExec < elapsedSecsToday(now())) {
         currentExec += SECS_PER_DAY;
       }
 
@@ -519,6 +493,7 @@ void mFunc_home(uint8_t param) {
     do {
       u8g2.drawStr(dateOffset, (LCDML_DISP_FONT_H * 1), date_buf);
       u8g2.drawStr(timeOffset, (LCDML_DISP_FONT_H * 2), time_buf);
+      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 3), flowString.c_str());
       u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 4), activeString.c_str());
       u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 5), nextString.c_str());
     } while( u8g2.nextPage() );

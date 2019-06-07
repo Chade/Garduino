@@ -32,8 +32,8 @@
 #define MOISTURE_PIN                 A0
 #define RAIN_PIN                     A1
 #define BRIGHTNESS_PIN               A2
+#define MOVEMENT_PIN                 53
 #define FLOW_PIN                     2
-#define MOVEMENT_PIN                 3
 // Encoder
 #define ENCODER_A_PIN                19    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
 #define ENCODER_B_PIN                18    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
@@ -61,6 +61,11 @@
 
 #define MOVEMENT_DECAY               60    // ms
 
+// *****************************************************************************
+// Constants
+// *****************************************************************************
+
+#define FLOW_CONV                    600.0 // ticks per liter
 
 // *****************************************************************************
 // Display settings
@@ -101,6 +106,7 @@
 #define NUM_CHANNEL                  8
 #define FILE_NAME                    "config.txt"
 #define BACKUP_NAME                  "backup.txt"
+#define LOGFILE                      "watering.log"
 
 
 // *****************************************************************************
@@ -155,6 +161,7 @@ class Timer {
 public:
   time_t start_time = 0;
   time_t duration = 0;
+  time_t repeat = 0;
 
 public:
   void print(Stream &stream, const String &name) {
@@ -164,14 +171,28 @@ public:
     stream.print(name);
     stream.print(F("Duration = "));
     stream.println(fromTime(duration));
+    stream.print(name);
+    stream.print(F("Repeat = "));
+    stream.println(fromTime(repeat));
   }
 
-  bool active(const time_t& now) {
-    return (elapsedSecsToday(now) >= start_time) && ((elapsedSecsToday(now) < start_time + duration) || (duration == 0));
+  bool preactive(const time_t& current_time, const time_t& in) {
+    bool is_active = false;
+    
+    if ((elapsedSecsToday(current_time) + in) >= start_time) {
+      if (repeat > 0) {
+        time_t delta = elapsedSecsToday(current_time) + in - start_time;
+        is_active = ((delta % repeat) < duration) || (duration == 0);
+      }
+      else {
+        is_active = ((elapsedSecsToday(current_time) + in) < (start_time + duration)) || (duration == 0);
+      }
+    }
+    return is_active;
   }
 
-  bool preactive(const time_t& now, const time_t& in) {
-    return (elapsedSecsToday(now) + in >= start_time) && ((elapsedSecsToday(now) + in < start_time + duration) || (duration == 0));
+  bool active(const time_t& current_time) {
+    return preactive(current_time, 0);
   }
 
   void setStartTime(const uint8_t& hour, const uint8_t& minute, const uint8_t& second){
@@ -183,6 +204,15 @@ public:
   }
 
   time_t getStartTime(){
+    return start_time;
+  }
+
+  time_t getNextStartTime(const time_t& current_time){
+    if ((repeat != 0) && (duration != 0) && (elapsedSecsToday(current_time) >= start_time)) {
+      time_t delta = elapsedSecsToday(current_time) - start_time;
+      uint32_t reps = (delta / repeat) + 1;
+      return start_time + (reps * repeat);
+    }
     return start_time;
   }
 };

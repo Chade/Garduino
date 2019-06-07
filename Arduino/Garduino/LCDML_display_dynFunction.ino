@@ -214,7 +214,7 @@ void mDyn_ch_start(uint8_t line) {
 // *****************************************************************************
 void mDyn_ch_duration(uint8_t line) {
   static uint8_t col_count = 0;
-  uint32_t duration = channel[current].time.duration / 60.0;
+  uint32_t duration = channel[current].time.duration / 60;
 
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
@@ -228,17 +228,49 @@ void mDyn_ch_duration(uint8_t line) {
     }
   }
 
-  char buf[13];
-  sprintf (buf, "Duration:%03d", duration);
+  char buf[17];
+  sprintf (buf, "Duration:%03d min.", duration);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
     u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 3), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].time.duration = duration * 60.0;
+  channel[current].time.duration = duration * 60;
 }
 
 
+// *****************************************************************************
+// Set repeat interval
+// *****************************************************************************
+void mDyn_ch_repeat(uint8_t line) {
+  static uint8_t col_count = 0;
+  uint32_t repeat = channel[current].time.repeat / 3600;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      repeat = (repeat < 23) ? repeat + 1 : 23;
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      repeat = (repeat > 0) ? repeat - 1 : 0;
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[15];
+  sprintf (buf, "Every   :%02d h", repeat);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 3), LCDML_DISP_FONT_H - 1);
+  }
+  channel[current].time.repeat = repeat * 3600;
+}
+
+// *****************************************************************************
+// Set quantity
+// *****************************************************************************
 void mDyn_ch_flow (uint8_t line) {
   static uint8_t col_count = 0;
   uint32_t count = channel[current].flow.count;
@@ -255,8 +287,8 @@ void mDyn_ch_flow (uint8_t line) {
     }
   }
 
-  char buf[14];
-  sprintf (buf, "Quantity:%04d", count);
+  char buf[20];
+  sprintf (buf, "Quantity:%04d lit.", count);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {

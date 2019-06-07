@@ -6,7 +6,9 @@
 #include <EEPROM.h>
 
 #include <Wire.h>
-#include <DS1307RTC.h>
+
+#include <TimeLib.h>
+#include <DS3232RTC.h>
 
 #include <FileConfig.h>
 #include <FileConfigHelper.h>
@@ -92,6 +94,10 @@ bool parseConfig(const byte& idx){
 
     value = configFile.getValue(F("TimeDuration"), header);
     channel[idx].time.duration = toSeconds(value);
+    //Serial.println(value);
+
+    value = configFile.getValue(F("TimeRepeat"), header);
+    channel[idx].time.repeat = toSeconds(value);
     //Serial.println(value);
 
     value = configFile.getValue(F("FlowCount"), header);
@@ -191,6 +197,37 @@ bool parseConfig() {
   return true;
 }
 
+void setupIOs() {
+  // Set up IOs
+  Serial.print(F("Setup I/Os."));
+  for (byte i = 0; i < NUM_CHANNEL; i++) {
+    Serial.print('.');
+    if (channel[i].output != 0) {
+      pinMode(channel[i].output, OUTPUT);
+      digitalWrite(channel[i].output, HIGH);
+    }
+    if (channel[i].input != 0) {
+      pinMode(channel[i].input, INPUT);
+    }
+    if (channel[i].signal != 0) {
+      pinMode(channel[i].signal, OUTPUT);
+    }
+    if (channel[i].movement.input != 0) {
+      pinMode(channel[i].movement.input, INPUT);
+    }
+    if (channel[i].moisture.input != 0) {
+      pinMode(channel[i].moisture.input, INPUT);
+    }
+    if (channel[i].rain.input != 0) {
+      pinMode(channel[i].rain.input, INPUT);
+    }
+    if (channel[i].brightness.input != 0) {
+      pinMode(channel[i].brightness.input, INPUT);
+    }
+  }
+  Serial.println(F("Done"));
+}
+
 void flowCounterInterrupt() {
   flowCounter += 1;
 }
@@ -231,8 +268,9 @@ void setup() {
     Serial.println(F("Done"));
   }
 
-  // Attach sd card detection interrupt
+  // Attach interrupts
   attachInterrupt(digitalPinToInterrupt(SD_CD_PIN), sdDetectInterrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
 
   // Parse config file
   //LCDML.OTHER_jumpToFunc(mFunc_readSD);
@@ -255,6 +293,23 @@ void loop() {
 
       if (channel[i].active != channel[i].was_active) {
         if (channel[i].was_active) {
+          // Write statistics to sd card
+          if(SD.begin(SD_CS_PIN)) {
+            File dataFile = SD.open(LOGFILE, (O_READ | O_WRITE | O_CREAT | O_APPEND));
+            char string_buf[40];
+            if (dataFile) {
+              float liter = (flowCounter - channel[i].flow.start_count)/FLOW_CONV;
+              sprintf (string_buf, "[%d.%02d.%02d|%02d:%02d:%02d](Ch%02d)", year(now()), month(now()), day(now()), hour(channel[i].time.start_time), minute(channel[i].time.start_time), second(channel[i].time.start_time), i);
+              dataFile.print(string_buf);
+              if (channel[i].skip == true) {
+                dataFile.println(F("Skipped"));
+              }
+              else {
+                dataFile.println(liter);
+              }
+            }
+            dataFile.close();
+          }
           // Reset skip flag on timer deactivation
           channel[i].skip = false;
         }
@@ -332,13 +387,18 @@ void loop() {
     if (channel[i].signal != 0) {
       if (channel[i].enabled) {
         if (channel[i].skip) {
-          digitalWrite(channel[i].signal, (millis()%2000 < 200) );
+          digitalWrite(channel[i].signal, (millis()%3000 < 200) );
         }
         else if (channel[i].time.active(now())) {
-          digitalWrite(channel[i].signal, (millis()%1000 < 500) );
+          if (!channel[i].active) {  // Executen prohibited by some sensor
+            digitalWrite(channel[i].signal, (millis()%1000 < 50) );
+          }
+          else {
+            digitalWrite(channel[i].signal, (millis()%1000 < 500) );
+          }
         }
         else if (channel[i].time.preactive(now(), 60)) {
-          digitalWrite(channel[i].signal, (millis()%500 < 50));
+          digitalWrite(channel[i].signal, (millis()%200 < 50));
         }
         else {
           digitalWrite(channel[i].signal, HIGH);
@@ -353,9 +413,11 @@ void loop() {
     }
 
     // Set digital output
-    digitalWrite(channel[i].output, channel[i].active && !channel[i].skip);
+    digitalWrite(channel[i].output, !(channel[i].active && !channel[i].skip));
   }
 
   // Update display
   updateMenu();
+  //Serial.print(F("Free SRAM: "));
+  //Serial.println(FileConfig::getFreeSram());
 }
