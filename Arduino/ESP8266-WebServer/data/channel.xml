@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<channels>
+  <channel id="0">
+    <enabled>true</enabled>
+    <state>active</state>
+    <time>20:00</time>
+    <duration>15</duration>
+    <repeat>120</repeat>
+  </channel>
+  <channel id="1">
+    <enabled>false</enabled>
+    <state>idle</state>
+    <time>20:15</time>
+    <duration>20</duration>
+    <repeat>180</repeat>
+  </channel>
+  <channel id="2">
+    <enabled>true</enabled>
+    <state>idle</state>
+    <time>20:30</time>
+    <duration>25</duration>
+    <repeat>240</repeat>
+  </channel>
+  <channel id="3">
+    <enabled>true</enabled>
+    <state>paused</state>
+    <time>20:45</time>
+    <duration>30</duration>
+    <repeat>300</repeat>
+  </channel>
+</channels>
+
