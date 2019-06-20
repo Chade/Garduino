@@ -3,31 +3,32 @@
 #include <FS.h>
 
 // Replace with your network credentials
-const char* ssid     = "gigacube-5193";
-const char* password = "MGJGT2R35RL51HQE";
+const char* ssid     = "Jungholz";
+const char* password = "45299115630418744911";
 
 // Set web server port number to 80
 WiFiServer server(80);
 
-// Web page file
+// File handle
 File webFile;
 
 // Variable to store the HTTP request
-String header;
+String request, response;
 
 void setup() {
   // Initialize serial
   Serial.begin(115200);
+  Serial.println();
 
   // Initialize SPIFFS
   if(!SPIFFS.begin()){
-    Serial.println("An Error has occurred while mounting SPIFFS");
+    Serial.println("[ERROR] An Error has occurred while mounting SPIFFS");
     return;
   }
   
   // Connect to Wi-Fi network with SSID and password
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+  Serial.print("[INFO] Connecting to ");
+  Serial.print(ssid);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -36,58 +37,53 @@ void setup() {
   Serial.println("");
   
   // Print local IP address
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
+  Serial.println("[INFO] WiFi connected.");
+  Serial.print("[INFO] IP address: ");
   Serial.println(WiFi.localIP());
   
   // Start web server
   server.begin();
+  Serial.println("[INFO] Server started");
 }
 
 void loop(){
   WiFiClient client = server.available();   // Listen for incoming clients
 
-  if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // print a message out in the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
-        header += c;
-        if (c == '\n') {                    // if the byte is a newline character
-          // if the current line is blank, you got two newline characters in a row.
+  if (client) {
+    Serial.println("[INFO] New client connected");
+    
+    String currentLine = "";
+    
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+        request += c;
+        if (c == '\n') {
+          // If the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
 
-            if (header.indexOf("channel") >= 0) {
-              Serial.print("Request received: ");
-              if (header.indexOf("channel.xml") >= 0) {
-                // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-                // and a content-type so the client knows what's coming, then a blank line:
-                client.println("HTTP/1.1 200 OK");
-                client.println("Content-type:text/xml");
-                client.println("Connection: keep-alive");
-                client.println();
-                
+            if (request.indexOf("channel") >= 0) {
+              Serial.print("[INFO] Request received: ");
+              if (request.indexOf("channel.xml") >= 0) {
                 Serial.println("channel.xml");
-                webFile = SPIFFS.open("/channel.xml", "r");
-                if (webFile) {
-                  while (webFile.available()) {
-                    client.write(webFile.read());
-                  }
-  
-                  webFile.close();
-                }
-                else {
-                  Serial.println("No such file");
-                }
+                sendFile(client, "/channel.xml");
               }
-              else if (header.indexOf("channel=") >= 0) {
-                Serial.println("Update channel informations");
+              else if (request.indexOf("channel=") >= 0) {
+                // Forward request
+                Serial.println(request);
+                Serial.flush();
+
+                // Wait for response
+                byte counter = 100;
+                while (!Serial.available() && counter--) {
+                  delay(100);
+                }
               }
             }
             else {
+              Serial.println("[INFO] Request received: index.html");
+              //sendFile(client, "/index.html");
               // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
               // and a content-type so the client knows what's coming, then a blank line:
               client.println("HTTP/1.1 200 OK");
@@ -97,20 +93,15 @@ void loop(){
               
               webFile = SPIFFS.open("/index.html", "r");
               if (webFile) {
-                Serial.println("Deliver index.html");
                 while (webFile.available()) {
                   client.write(webFile.read());
                 }
-  
                 webFile.close();
               }
               else {
-                  Serial.println("No such file");
+                  Serial.println("[ERROR] No such file index.html");
               }
             }
-
-            // The HTTP response ends with another blank line
-            client.println();
 
             // Break out of the while loop
             break;
@@ -124,14 +115,53 @@ void loop(){
     } // end while (client.connected())
     
     // Clear the header variable
-    header = "";
+    request = "";
     
     // Close the connection
     client.stop();
     
-    Serial.println("Client disconnected.");
+    Serial.println("[INFO] Client disconnected.");
     Serial.println("");
+
+    /*while (Serial.available()) {
+      char c = client.read();
+      response += c;
+      if (c == '\n') {
+        
+      }
+    }*/
   } // end if (client)
+}
+
+void sendFile(WiFiClient cl, String filename) {
+  Serial.print("Send file ");
+  Serial.println(filename);
+  
+  String filetype = filename.substring(filename.lastIndexOf('.')+1);
+  Serial.print("File extension is ");
+  Serial.println(filetype);
+  
+
+  // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+  // and a content-type so the client knows what's coming, then a blank line:
+  cl.println("HTTP/1.1 200 OK");
+  cl.println("Content-type:text/" + filetype);
+  cl.println("Connection: keep-alive");
+  cl.println();
+  
+  webFile = SPIFFS.open(filename, "r");
+  if (webFile) {
+    while (webFile.available()) {
+      cl.write(webFile.read());
+    }
+    webFile.close();
+  }
+  else {
+      Serial.print("[ERROR] No such file ");
+      Serial.println(filename);
+  }
+
+  Serial.println("Finished");
 }
 
 // Assemble xml file
