@@ -53,6 +53,7 @@ void loop(){
   WiFiClient client = server.available();   // Listen for incoming clients
 
   if (client) {                             // If a new client connects,
+    Serial.println("[INFO] Client connected");
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
       if (client.available()) {             // if there's bytes to read from the client,
@@ -62,50 +63,31 @@ void loop(){
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
-            if (request.indexOf("channel.xml") >= 0) {
+            Serial.println(request);
+            if (request.indexOf("channel") >= 0) {
               // Forward request to arduino mega
               Serial.println(request.substring(0, request.indexOf('\n')));
               Serial.flush();
 
-              // Wait for response from arduino mega
-              byte count = 100;
-              while (!Serial.available() && count--) {
-                delay(10);
-              }
-
-              // Read  response from arduino mega
-              byte count = 100;
-              while (Serial.available()) {
-                Serial.read();
-                delay(10);
-              }
-
-              // Send response to website
-              sendFile(client, "/channel.xml");
-            }
-            else if (request.indexOf("channel=") >= 0) {
-              // Forward request to arduino mega
-              Serial.println(request.substring(0, request.indexOf('\n')));
-              Serial.flush();
-
-              // Wait for response from arduino mega
-              while (!Serial.available() && count--) {
-                delay(10);
-              }
-
-              // Read  response from arduino mega
-              byte count = 100;
-              while (Serial.available()) {
-                Serial.read();
-                delay(10);
-              }
-
-              // Send response to website
               client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:text/xml");
+              client.println("Connection: keep-alive");
               client.println();
+    
+              // Wait for response from arduino mega
+              char s, n;
+              do {
+                if (Serial.available() >= 2) {
+                  s = Serial.read();
+                  n = Serial.peek();
+                  client.write(s);
+                }
+              } while (!(s == '\n' && n == '\n'));
             }
             else {
+              Serial.print("[INFO] Deliver index.html...");
               sendFile(client, "/index.html");
+              Serial.println("Done");
             }
 
             // Break out of the while loop
@@ -124,13 +106,14 @@ void loop(){
     
     // Close the connection
     client.stop();
+    Serial.println("[INFO] Client disconnected");
   } // end if (client)
 }
 
-void sendFile(WiFiClient cl, String filename) {
+void sendFile(WiFiClient& cl, String filename) {
   String filetype = filename.substring(filename.lastIndexOf('.')+1);
-
-  File file = SPIFFS.open(filename, "r");
+  static File file = SPIFFS.open(filename, "r");
+  
   if (file) {
     // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
     // and a content-type so the client knows what's coming, then a blank line:
@@ -139,12 +122,18 @@ void sendFile(WiFiClient cl, String filename) {
     cl.println("Connection: keep-alive");
     cl.println();
   
+    String buffer = "";
     while (file.available()) {
-      cl.write(file.read());
+      char c = file.read();
+      if (c == '\n') {
+        cl.println(buffer);
+        buffer = "";
+      }
+      else {
+        buffer += c;
+      }
     }
     file.close();
-
-    cl.println();
   }
   else {
       cl.println("HTTP/1.1 400 Bad Request");
@@ -152,7 +141,6 @@ void sendFile(WiFiClient cl, String filename) {
       cl.println("Connection: close");
       cl.println();
       cl.println("Could not find file " + filename);
-      
   }
 }
 
