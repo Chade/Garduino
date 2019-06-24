@@ -5,15 +5,12 @@
 // Replace with your network credentials
 //const char* ssid     = "gigacube-5193";
 //const char* password = "MGJGT2R35RL51HQE";
-const char* ssid     = "Jungholz";
+const char* ssid     = "Jungholz-AP";
 const char* password = "45299115630418744911";
 
 
 // Set web server port number to 80
 WiFiServer server(80);
-
-// Web page file
-File webFile;
 
 // Variable to store the HTTP request
 String request, response;
@@ -25,12 +22,12 @@ void setup() {
 
   // Initialize SPIFFS
   if(!SPIFFS.begin()){
-    Serial.println("[ERROR] An Error has occurred while mounting SPIFFS");
+    Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
   
   // Connect to Wi-Fi network with SSID and password
-  Serial.print("[INFO] Connecting to ");
+  Serial.print("Connecting to ");
   Serial.print(ssid);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -40,20 +37,21 @@ void setup() {
   Serial.println("");
   
   // Print local IP address
-  Serial.println("[INFO] WiFi connected.");
-  Serial.print("[INFO] IP address: ");
+  Serial.println("WiFi connected.");
+  Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   
   // Start web server
   server.begin();
-  Serial.println("[INFO] Server started\n");
+  Serial.println("Server started\n");
+  Serial.flush();
 }
 
 void loop(){
   WiFiClient client = server.available();   // Listen for incoming clients
 
   if (client) {                             // If a new client connects,
-    Serial.println("[INFO] Client connected");
+    Serial.println("Client connected");
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
       if (client.available()) {             // if there's bytes to read from the client,
@@ -63,9 +61,8 @@ void loop(){
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
-            Serial.println(request);
             if (request.indexOf("channel") >= 0) {
-              // Forward request to arduino mega
+              // Forward request to arduino mega, but only the first line
               Serial.println(request.substring(0, request.indexOf('\n')));
               Serial.flush();
 
@@ -80,12 +77,15 @@ void loop(){
                 if (Serial.available() >= 2) {
                   s = Serial.read();
                   n = Serial.peek();
-                  client.write(s);
+                  client.print(s);
                 }
+                yield();
               } while (!(s == '\n' && n == '\n'));
+              client.println();
+              client.flush();
             }
             else {
-              Serial.print("[INFO] Deliver index.html...");
+              Serial.print("Deliver index.html...");
               sendFile(client, "/index.html");
               Serial.println("Done");
             }
@@ -106,19 +106,19 @@ void loop(){
     
     // Close the connection
     client.stop();
-    Serial.println("[INFO] Client disconnected");
+    Serial.println("Client disconnected");
   } // end if (client)
 }
 
 void sendFile(WiFiClient& cl, String filename) {
-  String filetype = filename.substring(filename.lastIndexOf('.')+1);
-  static File file = SPIFFS.open(filename, "r");
+  static File file;
+  file = SPIFFS.open(filename, "r");
   
   if (file) {
     // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
     // and a content-type so the client knows what's coming, then a blank line:
     cl.println("HTTP/1.1 200 OK");
-    cl.println("Content-type:text/" + filetype);
+    cl.println("Content-type:text/" + filename.substring(filename.lastIndexOf('.')+1));
     cl.println("Connection: keep-alive");
     cl.println();
   
@@ -132,6 +132,7 @@ void sendFile(WiFiClient& cl, String filename) {
       else {
         buffer += c;
       }
+      yield();
     }
     file.close();
   }
@@ -142,6 +143,7 @@ void sendFile(WiFiClient& cl, String filename) {
       cl.println();
       cl.println("Could not find file " + filename);
   }
+  cl.flush();
 }
 
 // Assemble xml file

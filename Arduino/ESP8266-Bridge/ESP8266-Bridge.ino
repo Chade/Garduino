@@ -22,7 +22,7 @@ void parseToXml(Stream& stream, const Channel* ch, const byte& numCh) {
     stream.println("</channel>");
   }
   stream.println("</channels>");
-  stream.println();
+  stream.println('\n');
 }
 
 
@@ -46,6 +46,8 @@ bool readRequest (Stream& stream, String& request) {
 void setup() {
   Serial.begin(115200);
   Serial3.begin(115200);
+
+  Serial.print("[MEGA2560] Setup...");
 
   channels[0].enabled = "true";
   channels[0].state = "idle";
@@ -74,25 +76,18 @@ void setup() {
   channels[3].startTime = "20:45";
   channels[3].duration = "30";
   channels[3].repeat = "300";
+
+  Serial.println("Done");
 }
 
 void loop() {
   String request;
   if (readRequest(Serial3, request)) {
+    Serial.println("[ESP8266]  " + request);
     if ( request.indexOf("channel.xml") >= 0) {
-      parseToXml(Serial, channels, 3);
+      Serial.print("[MEGA2560] Deliver channel.xml...");
+      parseToXml(Serial3, channels, 3);
+      Serial.println("Done");
     }
-    else {
-      // Forward output from esp8266 to console
-      Serial.print("[ESP8266] " + request);
-    }
-    
   }
-
-  //Forward console input to esp8266
-  while (Serial.available()) {
-    Serial3.print(Serial.read());
-  }
-
-  delay(100);
 }
