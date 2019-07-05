@@ -34,6 +34,7 @@
 #define BRIGHTNESS_PIN               A2
 #define MOVEMENT_PIN                 53
 #define FLOW_PIN                     2
+#define PUMP_PIN                     11
 // Encoder
 #define ENCODER_A_PIN                19    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
 #define ENCODER_B_PIN                18    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
@@ -103,7 +104,7 @@
 // General
 // *****************************************************************************
 
-#define NUM_CHANNEL                  8
+#define NUM_CHANNEL                  7
 #define FILE_NAME                    "config.txt"
 #define BACKUP_NAME                  "backup.txt"
 #define LOGFILE                      "watering.log"

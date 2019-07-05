@@ -451,18 +451,18 @@ void mFunc_home(uint8_t param) {
       timeOffset = 25;
     }
 
-  // Display current flow
-   String flowString(F("Liter : "));
-   flowString.concat(flowCounter / FLOW_CONV);
-
-   // Display current execution on homescreen
-   String activeString(F("Active:"));
-   for(byte i = 0; i < NUM_CHANNEL; i++) {
-     if(channel[i].active && !channel[i].skip) {
-       activeString.concat(" Ch");
-	   activeString.concat(i);
-     }
-   }
+    // Display current flow
+    String flowString(F("Liter : "));
+    flowString.concat(flowCounter / FLOW_CONV);
+    
+    // Display current execution on homescreen
+    String activeString(F("Active:"));
+    for(byte i = 0; i < NUM_CHANNEL; i++) {
+      if(channel[i].active && !channel[i].skip) {
+        activeString.concat(" Ch");
+        activeString.concat(i);
+      }
+    }
 
     // Display next execution on homescreen
     byte nextChannel = -1;
@@ -477,16 +477,19 @@ void mFunc_home(uint8_t param) {
         currentExec += SECS_PER_DAY;
       }
 
-      if(currentExec < nextExec) {
+      if(channel[i].enabled && (currentExec < nextExec)) {
         nextChannel = i;
         nextExec = currentExec;
       }
     }
 
-    String nextString(F("Next  : Ch"));
-    nextString.concat(nextChannel);
-    nextString.concat(' ');
-    nextString.concat(fromTime(channel[nextChannel].time.start_time));
+    String nextString(F("Next  : "));
+    if (nextChannel != -1) {
+      nextString.concat(F("Ch"));
+      nextString.concat(nextChannel);
+      nextString.concat(' ');
+      nextString.concat(fromTime(channel[nextChannel].time.start_time));
+    }
 
     u8g2.setFont(LCDML_DISP_FONT);
     u8g2.firstPage();

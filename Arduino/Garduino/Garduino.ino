@@ -44,6 +44,9 @@ LCDMenuLib2 LCDML(LCDML_0, LCDML_DISP_ROWS, LCDML_DISP_COLS, lcdml_menu_display,
 // Objects
 // *****************************************************************************
 
+// Log file
+File logFile;
+
 // Channel storage
 Channel channel[NUM_CHANNEL];
 
@@ -225,6 +228,8 @@ void setupIOs() {
       pinMode(channel[i].brightness.input, INPUT);
     }
   }
+  pinMode(PUMP_PIN, OUTPUT);
+  digitalWrite(PUMP_PIN, HIGH);
   Serial.println(F("Done"));
 }
 
@@ -268,6 +273,25 @@ void setup() {
     Serial.println(F("Done"));
   }
 
+  // Write boot notice to log
+  Serial.print(F("Write notice to log..."));
+  if(SD.begin(SD_CS_PIN)) {
+    logFile = SD.open(LOGFILE, (O_READ | O_WRITE | O_CREAT | O_APPEND));
+    if (logFile) {
+      char string_buf[40];
+      sprintf (string_buf, "[%d.%02d.%02d|%02d:%02d:%02d]Booted", year(now()), month(now()), day(now()), hour(now()), minute(now()), second(now()));
+      logFile.println(string_buf);
+      logFile.close();
+      Serial.println(F("Done"));
+    }
+    else {
+      Serial.println(F("Error opening file"));
+    }
+  }
+  else {
+    Serial.println(F("Error starting SD"));
+  }
+
   // Attach interrupts
   attachInterrupt(digitalPinToInterrupt(SD_CD_PIN), sdDetectInterrupt, FALLING);
   attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
@@ -295,20 +319,20 @@ void loop() {
         if (channel[i].was_active) {
           // Write statistics to sd card
           if(SD.begin(SD_CS_PIN)) {
-            File dataFile = SD.open(LOGFILE, (O_READ | O_WRITE | O_CREAT | O_APPEND));
+            logFile = SD.open(LOGFILE, (O_READ | O_WRITE | O_CREAT | O_APPEND));
             char string_buf[40];
-            if (dataFile) {
+            if (logFile) {
               float liter = (flowCounter - channel[i].flow.start_count)/FLOW_CONV;
               sprintf (string_buf, "[%d.%02d.%02d|%02d:%02d:%02d](Ch%02d)", year(now()), month(now()), day(now()), hour(channel[i].time.start_time), minute(channel[i].time.start_time), second(channel[i].time.start_time), i);
-              dataFile.print(string_buf);
+              logFile.print(string_buf);
               if (channel[i].skip == true) {
-                dataFile.println(F("Skipped"));
+                logFile.println(F("Skipped"));
               }
               else {
-                dataFile.println(liter);
+                logFile.println(liter);
               }
+              logFile.close();
             }
-            dataFile.close();
           }
           // Reset skip flag on timer deactivation
           channel[i].skip = false;
@@ -356,11 +380,11 @@ void loop() {
 
     // Update buttons
     if (channel[i].input != 0) {
-      if (digitalRead(channel[i].input) == HIGH && bitRead(button_prev, i) == LOW) {      // Rising edge = button pressed
+      if (digitalRead(channel[i].input) == HIGH && bitRead(button_prev, i) == LOW) { // Rising edge = button pressed
         bitWrite(button_prev, i, HIGH);
         button_time = millis();
       }
-      else if (digitalRead(channel[i].input) == HIGH && bitRead(button_prev, i) == HIGH && button_time != 0) {           // High = keeping button pressed
+      else if (digitalRead(channel[i].input) == HIGH && bitRead(button_prev, i) == HIGH && button_time != 0) { // High = keeping button pressed
         if ((millis() - button_time) >= CONTROL_BUTTON_LONG_PRESS) {
           // Toggle enabled
           button_time = 0;
@@ -416,8 +440,19 @@ void loop() {
     digitalWrite(channel[i].output, !(channel[i].active && !channel[i].skip));
   }
 
+  if ((channel[0].active && !channel[0].skip) ||
+      (channel[1].active && !channel[1].skip) ||
+      (channel[2].active && !channel[2].skip) ||
+      (channel[3].active && !channel[3].skip)) {
+    digitalWrite(PUMP_PIN, LOW);
+  }
+  else {
+    digitalWrite(PUMP_PIN, HIGH);
+  }
+
   // Update display
   updateMenu();
+  
   //Serial.print(F("Free SRAM: "));
   //Serial.println(FileConfig::getFreeSram());
 }
