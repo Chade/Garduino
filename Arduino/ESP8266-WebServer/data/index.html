@@ -25,7 +25,7 @@
           }
         }
         
-        var requestString = "?channel=" + element_idx + "&" + element.name + "=" + checked;
+        var requestString = "channel.xml?channel=" + element_idx + "&" + element.name + "=" + checked;
         request.open("GET", requestString, true);
         request.send(null);
       };
@@ -41,7 +41,7 @@
           }
         }
         
-        var requestString = "?channel=" + element_idx + "&" + name + "=" + value;
+        var requestString = "channel.xml?channel=" + element_idx + "&" + name + "=" + value;
         request.open("GET", requestString, true);
         request.send(null);
       };
