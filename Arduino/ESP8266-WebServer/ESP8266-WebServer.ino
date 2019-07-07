@@ -2,11 +2,9 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncWebServer.h>
 
-#define TIMEOUT 1000
+#define TIMEOUT 1500
 
 // Replace with your network credentials
-//const char* ssid     = "gigacube-5193";
-//const char* password = "MGJGT2R35RL51HQE";
 const char* ssid     = "Jungholz-AP";
 const char* password = "45299115630418744911";
 
@@ -17,26 +15,23 @@ AsyncWebServer server(80);
 void setup() {
   // Initialize serial
   Serial.begin(115200);
-  Serial.println();
 
   // Initialize SPIFFS
   if (!SPIFFS.begin()){
-    Serial.println("An Error has occurred while mounting SPIFFS");
+    Serial.println("An Error occurred while mounting SPIFFS");
     return;
   }
 
-  // Connect to Wi-Fi network with SSID and password
-  Serial.print("Connecting to ");
-  Serial.print(ssid);
+  // Initialize wifi and connect to network
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
   }
-  Serial.println("");
-  
+
   // Print local IP address
-  Serial.println("WiFi connected.");
+  Serial.print("WiFi connected to ");
+  Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
@@ -107,7 +102,8 @@ void setup() {
 
   // Start web server
   server.begin();
-  Serial.println("Server started\n");
+  
+  Serial.println("Webserver started\n");
   Serial.flush();
 }
 

@@ -216,10 +216,9 @@ void mFunc_readSD(uint8_t param) {
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
-    Serial.print(F("Parsing config file"));
+    Serial.print(F("[MEGA2560] Read config from SD"));
     LCDML.FUNC_disableScreensaver();
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
-
     index = 0;
   }
 
@@ -271,10 +270,10 @@ void mFunc_writeSD(uint8_t param) {
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
+    Serial.print(F("[MEGA2560] Write config to SD"));
     LCDML.FUNC_disableScreensaver();
     LCDML.TIMER_msReset(timer);
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
-
     index = 0;
   }
 
@@ -295,13 +294,14 @@ void mFunc_writeSD(uint8_t param) {
         sdStatus = F("Saving to SD");
         if (LCDML.TIMER_ms(timer, 1000)) {
           if(index < NUM_CHANNEL) {
+            Serial.print('.');
             String header(F("Channel"));
             header.concat(index);
-            channel[index].print(Serial, header);
             channel[index].print(dataFile, header);
             index++;
           }
           else {
+            Serial.print(F("Done"));
             LCDML.MENU_goRoot();
           }
           timer = millis();
@@ -332,10 +332,9 @@ void mFunc_readEEPROM(uint8_t param) {
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
-    Serial.print(F("Read config"));
+    Serial.print(F("[MEGA2560] Read config from EEPROM"));
     LCDML.FUNC_disableScreensaver();
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
-
     index = 0;
   }
 
@@ -344,8 +343,8 @@ void mFunc_readEEPROM(uint8_t param) {
     String eepromStatus(F("Read from EEPROM"));
     
     if(index < NUM_CHANNEL) {
-      EEPROM.get(index * sizeof(Channel), channel[index]);
       Serial.print('.');
+      EEPROM.get(index * sizeof(Channel), channel[index]);
       index++;
     }
     else {
@@ -376,10 +375,10 @@ void mFunc_writeEEPROM(uint8_t param) {
 
   if (LCDML.FUNC_setup())     // ****** Setup *********
   {
+    Serial.print(F("[MEGA2560] Write config to EEPROM"));
     LCDML.FUNC_disableScreensaver();
     LCDML.TIMER_msReset(timer);
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
-
     index = 0;
   }
 
@@ -389,13 +388,12 @@ void mFunc_writeEEPROM(uint8_t param) {
 
     if (LCDML.TIMER_ms(timer, 1000)) {
       if(index < NUM_CHANNEL) {
-        String header(F("Channel"));
-        header.concat(index);
-        channel[index].print(Serial, header);
+        Serial.print('.');
         EEPROM.put(index*sizeof(Channel), channel[index]);
         index++;
       }
       else {
+        Serial.println(F("Done"));
         LCDML.MENU_goRoot();
       }
       timer = millis();

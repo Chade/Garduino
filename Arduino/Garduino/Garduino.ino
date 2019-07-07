@@ -77,111 +77,84 @@ bool parseConfig(const byte& idx){
 
     value = configFile.getValue(F("Enabled"), header);
     channel[idx].enabled = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("OutputPin"), header);
     channel[idx].output = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("InputPin"), header);
     channel[idx].input = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("SignalPin"), header);
     channel[idx].signal = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("TimeStart"), header);
     channel[idx].time.start_time = toSeconds(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("TimeDuration"), header);
     channel[idx].time.duration = toSeconds(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("TimeRepeat"), header);
     channel[idx].time.repeat = toSeconds(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("FlowCount"), header);
     channel[idx].flow.count = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("MovementEnabled"), header);
     channel[idx].movement.enabled = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("MovementInvert"), header);
     channel[idx].movement.inverted = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("MovementPin"), header);
     channel[idx].movement.input = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("MovementDelay"), header);
     channel[idx].movement.delay = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("MoistureEnabled"), header);
     channel[idx].moisture.enabled = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("MoistureInvert"), header);
     channel[idx].moisture.inverted = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("MoisturePin"), header);
     channel[idx].moisture.input = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("MoistureThresholdLow"), header);
     channel[idx].moisture.threshold_low = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("MoistureThresholdHigh"), header);
     channel[idx].moisture.threshold_high = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("RainEnabled"), header);
     channel[idx].rain.enabled = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("RainInvert"), header);
     channel[idx].rain.inverted = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("RainPin"), header);
     channel[idx].rain.input = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("RainThresholdLow"), header);
     channel[idx].rain.threshold_low = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("RainThresholdHigh"), header);
     channel[idx].rain.threshold_high = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("BrightnessEnabled"), header);
     channel[idx].brightness.enabled = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("BrightnessInvert"), header);
     channel[idx].brightness.inverted = toBool(value);
-    //Serial.println(value);
 
     value = configFile.getValue(F("BrightnessPin"), header);
     channel[idx].brightness.input = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("BrightnessThresholdLow"), header);
     channel[idx].brightness.threshold_low = value.toInt();
-    //Serial.println(value);
 
     value = configFile.getValue(F("BrightnessThresholdHigh"), header);
     channel[idx].brightness.threshold_high = value.toInt();
-    //Serial.println(value);
 
     configFile.close();
     return true;
@@ -200,9 +173,21 @@ bool parseConfig() {
   return true;
 }
 
+void channelToXML(Stream& stream) {
+  stream.println(F("<?xml version = \"1.0\" ?>"));
+  stream.println(F("<channels>"));
+
+  for (byte i = 0; i < NUM_CHANNEL; i++) {
+    channel[i].printXML(stream, String(i), false);
+  }
+
+  stream.println(F("</channels>"));
+  stream.println('\n');
+}
+
 void setupIOs() {
   // Set up IOs
-  Serial.print(F("Setup I/Os."));
+  Serial.print(F("[MEGA2560] Setup I/Os."));
   for (byte i = 0; i < NUM_CHANNEL; i++) {
     Serial.print('.');
     if (channel[i].output != 0) {
@@ -233,6 +218,84 @@ void setupIOs() {
   Serial.println(F("Done"));
 }
 
+bool readRequest (Stream& stream, String& request) {
+  static String buffer = "";
+  
+  while (stream.available()) {
+    char c = stream.read();
+    if (c == '\n') {
+      request = buffer;
+      buffer = "";
+      return true;
+    }
+    else {
+      buffer += c;
+    }
+  }
+  return false;
+}
+
+void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
+  String request;
+  if (readRequest(streamIn, request)) {
+    int index = request.indexOf("channel.xml");
+    if (index >= 0) {
+      index = request.indexOf('?', index+11);
+      if (index >= 0) {
+        // Read channel number
+        int channelIdxStart = request.indexOf("channel=", index+1) + 8;
+        byte channelIdx = request.substring(channelIdxStart).toInt();
+
+        int startIdx = index;
+        int sepIdx, endIdx;
+
+        do {
+          sepIdx = request.indexOf('=', startIdx+1);
+          endIdx = request.indexOf('&', sepIdx+1);
+          if (endIdx == 0) {
+            endIdx = request.length();
+          }
+
+          String key   = request.substring(startIdx+1, sepIdx);
+          String value = request.substring(sepIdx+1, endIdx);
+
+          if (key == F("enabled")) {
+            channel[channelIdx].enable(toBool(value));
+          }
+          else if (key == F("skip")) {
+            channel[channelIdx].doSkip(toBool(value));
+          }
+          else if (key == F("time")) {
+            channel[channelIdx].time.setStartTime(toTime(value));
+          }
+          else if (key == F("duration")) {
+            channel[channelIdx].time.setDuration(toSeconds(value));
+          }
+          else if (key == F("repeat")) {
+            channel[channelIdx].time.setRepeat(toSeconds(value));
+          }
+
+          startIdx = endIdx;
+        } while (endIdx < request.length());
+
+        // Send response xml
+        channel[channelIdx].printXML(streamIn, String(channelIdx));
+      }
+      else {
+        channelToXML(streamIn);
+      }
+    }
+    else {
+      streamOut.println("[ESP8266]  " + request);
+    }
+  }
+}
+
+
+// *****************************************************************************
+// Callbacks
+// *****************************************************************************
+
 void flowCounterInterrupt() {
   flowCounter += 1;
 }
@@ -252,19 +315,20 @@ void sdDetectInterrupt() {
 void setup() {
   // Initialize Serial
   Serial.begin(BAUD_RATE);
-  while (!Serial) {
-    delay(100); // wait for serial port to connect. Needed for native USB port only
+  Serial3.begin(BAUD_RATE);
+  while (!Serial || !Serial3) {
+    delay(100); // wait for serial ports to connect. Needed for native USB port only
   }
 
-  Serial.println();
+  Serial.println();  
 
   // Initialize LCD
-  Serial.print(F("Initializing LCD..."));
+  Serial.print(F("[MEGA2560] Initializing LCD..."));
   initMenu();
   Serial.println(F("Done"));
 
   // Initiialize RTC
-  Serial.print(F("Initializing RTC..."));
+  Serial.print(F("[MEGA2560] Initializing RTC..."));
   setSyncProvider(RTC.get);
   if (timeStatus() != timeSet) {
      Serial.println("Failed");
@@ -274,7 +338,7 @@ void setup() {
   }
 
   // Write boot notice to log
-  Serial.print(F("Write notice to log..."));
+  Serial.print(F("[MEGA2560] Write notice to log..."));
   if(SD.begin(SD_CS_PIN)) {
     logFile = SD.open(LOGFILE, (O_READ | O_WRITE | O_CREAT | O_APPEND));
     if (logFile) {
@@ -293,8 +357,10 @@ void setup() {
   }
 
   // Attach interrupts
+  Serial.print(F("[MEGA2560] Attach interrupts..."));
   attachInterrupt(digitalPinToInterrupt(SD_CD_PIN), sdDetectInterrupt, FALLING);
   attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
+  Serial.println(F("Done"));
 
   // Parse config file
   //LCDML.OTHER_jumpToFunc(mFunc_readSD);
@@ -372,7 +438,7 @@ void loop() {
         channel[i].active &= channel[i].rain.active();
       }
 
-      // Check moisture sensor to deactivate channel
+      // Check brightness sensor to deactivate channel
       if (channel[i].active && channel[i].brightness.enabled) {
         channel[i].active &= channel[i].brightness.active();
       }
@@ -450,9 +516,9 @@ void loop() {
     digitalWrite(PUMP_PIN, HIGH);
   }
 
+  // Handle request from webserver
+  handleRequest(Serial3);
+
   // Update display
   updateMenu();
-  
-  //Serial.print(F("Free SRAM: "));
-  //Serial.println(FileConfig::getFreeSram());
 }

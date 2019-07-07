@@ -13,89 +13,118 @@
           time = hours + ":" + minutes + ":" + seconds;
           document.getElementById(field).innerHTML = time;
       };
-      
+
+      function ParseChangeXML(xml) {
+        var responseChannel = xml.responseXML.getElementsByTagName("channel");
+
+        for (var i = 0; i <responseChannel.length; i++) {
+          var idx = responseChannel[i].getAttribute('id');
+
+          var responseEnabled  = responseChannel[i].getElementsByTagName("enabled")[0].childNodes[0].nodeValue;
+          var responseState    = responseChannel[i].getElementsByTagName("skip")[0].childNodes[0].nodeValue;
+          var responseTime     = responseChannel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
+          var responseDuration = responseChannel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
+          var responseRepeat   = responseChannel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue;
+
+          document.getElementById("time" + idx).value = responseTime;
+          document.getElementById("duration" + idx).value = responseDuration;
+          document.getElementById("repeat" + idx).value = responseRepeat;
+
+          if (responseEnabled = "true") {
+            document.getElementById("enabled" + idx).checked = true;
+          }
+          else if (responseEnabled = "false"){
+            document.getElementById("enabled" + idx).checked = false;
+          }
+
+          if (responseState = "skip") {
+            document.getElementById("skip" + idx).checked = true;
+          }
+          else {
+            document.getElementById("skip" + idx).checked = false;
+          }
+        }
+      }
+
       function EventButtonClicked(element, element_idx) {
         var name = element.name;
         var checked = element.checked;
-        
+
         var request = new XMLHttpRequest();
         request.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
-            document.getElementById("info").innerHTML = "Changed state of " + name  + " of channel " + element_idx + " to " + checked;
+            ParseChangeXML(this);
           }
         }
-        
+
         var requestString = "channel.xml?channel=" + element_idx + "&" + element.name + "=" + checked;
         request.open("GET", requestString, true);
         request.send(null);
       };
-      
+
       function EventNumberChanged(element, element_idx) {
         var name = element.name;
         var value = element.value;
-        
+
         var request = new XMLHttpRequest();
         request.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
-            document.getElementById("info").innerHTML = "Changed value of " + name + " of channel " + element_idx + " to " + value;
+            ParseChangeXML(this);
           }
         }
-        
+
         var requestString = "channel.xml?channel=" + element_idx + "&" + name + "=" + value;
         request.open("GET", requestString, true);
         request.send(null);
       };
-      
+
       function ParseXML(xml) {
         var table="<tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>Skip</th></tr>";
 
         var channel = xml.responseXML.getElementsByTagName("channel");
-        
+
         for (var i = 0; i <channel.length; i++) {
           var idx = channel[i].getAttribute('id');
-          var enabled = channel[i].getElementsByTagName("enabled")[0].childNodes[0].nodeValue
-          var state = channel[i].getElementsByTagName("state")[0].childNodes[0].nodeValue
-          var startTime = channel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue
-          var duration = channel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue
-          var repeat = channel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue
-          
-          var buttonEnabled = "<label class=\"switch\"><input id=\"enabled" + idx + "\" name=\"enable\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
+          var enabled = channel[i].getElementsByTagName("enabled")[0].childNodes[0].nodeValue;
+          var state = channel[i].getElementsByTagName("state")[0].childNodes[0].nodeValue;
+          var startTime = channel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
+          var duration = channel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
+          var repeat = channel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue;
+
+          var buttonEnabled = "<label class=\"switch\"><input id=\"enabled" + idx + "\" name=\"enabled\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
           if (enabled == "true") {
             buttonEnabled += "checked";
           }
           buttonEnabled += "><span class=\"slider round\"></span></label>"
-          
-          var buttonPaused = "<label class=\"switch\"><input id=\"paused" + idx + "\" name=\"pause\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
-          if (state == "paused") {
-            buttonPaused += "checked"
+
+          var buttonSkip = "<label class=\"switch\"><input id=\"skip" + idx + "\" name=\"skip\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
+          if (state == "skip") {
+            buttonSkip += "checked"
           }
-          buttonPaused += "><span class=\"slider round\"></span></label>"
-          
+          buttonSkip += "><span class=\"slider round\"></span></label>"
+
           var editTime     = "<input id=\"time"     + idx + "\" name=\"time\"     type=\"time\"   value=\"" + startTime + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
           var editDuration = "<input id=\"duration" + idx + "\" name=\"duration\" type=\"number\" value=\"" + duration  + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
           var editRepeat   = "<input id=\"repeat"   + idx + "\" name=\"repeat\"   type=\"number\" value=\"" + repeat    + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-          
-          table += "<tr><td>" + idx + "</td><td>" + buttonEnabled + "</td><td>" + state + "</td><td>" + editTime + "</td><td>" +  editDuration + "</td><td>" + editRepeat + "</td><td>" + buttonPaused + "</td></tr>";
+
+          table += "<tr><td>" + idx + "</td><td>" + buttonEnabled + "</td><td>" + state + "</td><td>" + editTime + "</td><td>" +  editDuration + "</td><td>" + editRepeat + "</td><td>" + buttonSkip + "</td></tr>";
         }
         document.getElementById("channels").innerHTML = table;
       };
-      
+
       function LoadXML() {
-        document.getElementById("info").innerHTML = "Loading channel.xml";
         var request = new XMLHttpRequest();
         request.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
-            document.getElementById("info").innerHTML = "Received channel.xml";
-            document.getElementById("debug").innerHTML = "<xmp>" + this.responseText + "</xmp>";
             ParseXML(this);
           }
         }
         request.open("GET", "channel.xml", true);
         request.send(null);
-        //setTimeout('LoadXML()', 10000);
+        setTimeout('LoadXML()', 10000);
         DisplayCurrentTime("currentTime");
       };
-      
+
       document.addEventListener('DOMContentLoaded', function() {
         DisplayCurrentTime("currentTime");
         LoadXML();
@@ -148,7 +177,7 @@
         width: 50px;
         height: 25px;
       }
-      .switch input { 
+      .switch input {
         opacity: 0;
         width: 0;
         height: 0;
@@ -199,7 +228,5 @@
       <h3>Last update: <span id="currentTime"></span></h3>
       <table id="channels"><tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>Skip</th></tr></table>
       <br><br>
-      <p id="info">Nothing done</p>
-      <p id="debug">Nothing done</p>
   </body>
 </html>

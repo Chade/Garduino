@@ -200,8 +200,8 @@ public:
     start_time = hour * SECS_PER_HOUR + minute * SECS_PER_MIN + second;
   }
 
-  void setStartTime(const time_t& time){
-    start_time = time;
+  void setStartTime(const time_t& new_time){
+    start_time = new_time;
   }
 
   time_t getStartTime(){
@@ -215,6 +215,26 @@ public:
       return start_time + (reps * repeat);
     }
     return start_time;
+  }
+
+  void setDuration(const time_t& new_duration)
+  {
+    duration = new_duration;
+  }
+
+  time_t getDuration()
+  {
+    return duration;
+  }
+
+  void setRepeat(const time_t& new_repeat)
+  {
+    repeat = new_repeat;
+  }
+
+  time_t getRepeat()
+  {
+    return repeat;
   }
 };
 
@@ -300,12 +320,32 @@ public:
   AnalogSwitch brightness;
 
 public:
-  bool enable(const bool& value){
+  void enable(const bool& value){
     enabled = value;
   }
 
   bool isEnabled(){
     return enabled;
+  }
+
+  void activate(const bool& value){
+    active = value;
+  }
+
+  bool isActive(){
+    return active;
+  }
+
+  bool wasActive(){
+    return was_active;
+  }
+
+  void doSkip(const bool& value){
+    skip = value;
+  }
+
+  bool isSkipped(){
+    return skip;
   }
 
   void print(Stream &stream, const String &name) {
@@ -326,23 +366,72 @@ public:
     stream.println(signal);
     stream.println();
 
-    time.print(stream, "Time");
+    time.print(stream, F("Time"));
     stream.println();
 
-    flow.print(stream, "Flow");
+    flow.print(stream, F("Flow"));
     stream.println();
 
-	  movement.print(stream, "Movement");
+	  movement.print(stream, F("Movement"));
     stream.println();
 
-    moisture.print(stream, "Moisture");
+    moisture.print(stream, F("Moisture"));
     stream.println();
 
-    rain.print(stream, "Rain");
+    rain.print(stream, F("Rain"));
     stream.println();
 
-    brightness.print(stream, "Brightness");
+    brightness.print(stream, F("Brightness"));
     stream.println();
+  }
+  
+  void printXML(Stream& stream, const String &name, const bool& header = true) {
+    String state;
+    if (skip) {
+      state = F("skip");
+    }
+    else if (active) {
+      state = F("active");
+    }
+    else {
+      state = F("idle");
+    }
+
+    if (header) {
+      stream.println(F("<?xml version = \"1.0\" ?>"));
+      stream.println(F("<channels>"));
+    }
+    
+    stream.print(F("<channel id=\""));
+    stream.print(name);
+    stream.println(F("\">"));
+    
+    stream.print(F("<enabled>"));
+    stream.print(fromBool(isEnabled()));
+    stream.println(F("</enabled>"));
+    
+    stream.print(F("<state>"));
+    stream.print(state);
+    stream.println(F("</state>"));
+    
+    stream.print(F("<time>"));
+    stream.print(fromTime(time.getStartTime()));
+    stream.println(F("</time>"));
+    
+    stream.print(F("<duration>"));
+    stream.print(time.getDuration());
+    stream.println(F("</duration>"));
+    
+    stream.print(F("<repeat>"));
+    stream.print(time.getRepeat());
+    stream.println(F("</repeat>"));
+    
+    stream.println(F("</channel>"));
+
+    if (header) {
+      stream.println(F("</channels>"));
+      stream.println('\n');
+    }
   }
 };
 
