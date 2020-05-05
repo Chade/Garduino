@@ -1,7 +1,7 @@
 ################################################################################
 
 [Channel0]
-Enabled = false
+Enabled = true
 OutputPin = 4
 InputPin = 26
 SignalPin = 30
@@ -37,7 +37,7 @@ BrightnessThresholdHigh = 1024
 ################################################################################
 
 [Channel1]
-Enabled = false
+Enabled = true
 OutputPin = 5
 InputPin = 27
 SignalPin = 31
@@ -73,7 +73,7 @@ BrightnessThresholdHigh = 1024
 ################################################################################
 
 [Channel2]
-Enabled = false
+Enabled = true
 OutputPin = 6
 InputPin = 28
 SignalPin = 32
@@ -109,7 +109,7 @@ BrightnessThresholdHigh = 1024
 ################################################################################
 
 [Channel3]
-Enabled = false
+Enabled = true
 OutputPin = 7
 InputPin = 29
 SignalPin = 33
@@ -145,7 +145,7 @@ BrightnessThresholdHigh = 1024
 ################################################################################
 
 [Channel4]
-Enabled = false
+Enabled = true
 OutputPin = 8
 InputPin = 0
 SignalPin = 0
@@ -181,7 +181,7 @@ BrightnessThresholdHigh = 1024
 ################################################################################
 
 [Channel5]
-Enabled = false
+Enabled = true
 OutputPin = 9
 InputPin = 0
 SignalPin = 0

@@ -34,7 +34,8 @@
 #define BRIGHTNESS_PIN               A2
 #define MOVEMENT_PIN                 53
 #define FLOW_PIN                     2
-#define PUMP_PIN                     11
+#define PUMP_PIN                     10
+#define FAN_PIN                      11
 // Encoder
 #define ENCODER_A_PIN                19    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
 #define ENCODER_B_PIN                18    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
@@ -72,25 +73,25 @@
 // Display settings
 // *****************************************************************************
 
-#define LCDML_DISP_WIDTH             128            // LCD width
-#define LCDML_DISP_HEIGHT            64             // LCD height
+#define LCDML_DISP_WIDTH             128                  // LCD width
+#define LCDML_DISP_HEIGHT            64                   // LCD height
 // Font settings
-#define LCDML_DISP_FONT              u8g_font_6x12  // u8glib font (more fonts under u8g.h line 1520 ...)
-#define LCDML_DISP_FONT_W            6              // font width
-#define LCDML_DISP_FONT_H            12             // font height
+#define LCDML_DISP_FONT              u8g2_font_6x12_tf    // u8glib font (more fonts under u8g.h line 1520 ...)
+#define LCDML_DISP_FONT_W            6                    // font width
+#define LCDML_DISP_FONT_H            12                   // font height
 // Cursor settings
-#define LCDML_DISP_CURSOR_CHAR       ">"            // cursor char
-#define LCDML_DISP_CUR_SPACE_BEFORE  2              // cursor space between
-#define LCDML_DISP_CUR_SPACE_BEHIND  4              // cursor space between
+#define LCDML_DISP_CURSOR_CHAR       ">"                  // cursor char
+#define LCDML_DISP_CUR_SPACE_BEFORE  2                    // cursor space between
+#define LCDML_DISP_CUR_SPACE_BEHIND  4                    // cursor space between
 // Menu position and size
-#define LCDML_DISP_BOX_X0            0              // start point (x0, y0)
-#define LCDML_DISP_BOX_Y0            0              // start point (x0, y0)
-#define LCDML_DISP_BOX_X1            128            // width x  (x0 + width)
-#define LCDML_DISP_BOX_Y1            64             // hight y  (y0 + height)
-#define LCDML_DISP_FRAME             1              // draw a box around the menu
+#define LCDML_DISP_BOX_X0            0                    // start point (x0, y0)
+#define LCDML_DISP_BOX_Y0            0                    // start point (x0, y0)
+#define LCDML_DISP_BOX_X1            128                  // width x  (x0 + width)
+#define LCDML_DISP_BOX_Y1            64                   // hight y  (y0 + height)
+#define LCDML_DISP_FRAME             1                    // draw a box around the menu
 #define LCDML_DISP_FRAME_OFFSET      LCDML_DISP_BOX_X0 + LCDML_DISP_FONT_W + LCDML_DISP_CUR_SPACE_BEHIND
 // Scrollbar settings
-#define LCDML_DISP_SCROLL_WIDTH      6              // scrollbar width (if this value is < 3, the scrollbar is disabled)
+#define LCDML_DISP_SCROLL_WIDTH      6                    // scrollbar width (if this value is < 3, the scrollbar is disabled)
 // Rows and cols
 #define LCDML_DISP_COLS_MAX          ((LCDML_DISP_BOX_X1-LCDML_DISP_BOX_X0)/LCDML_DISP_FONT_W)
 #define LCDML_DISP_ROWS_MAX          ((LCDML_DISP_BOX_Y1-LCDML_DISP_BOX_Y0-((LCDML_DISP_BOX_Y1-LCDML_DISP_BOX_Y0)/LCDML_DISP_FONT_H))/LCDML_DISP_FONT_H)
@@ -104,7 +105,7 @@
 // General
 // *****************************************************************************
 
-#define NUM_CHANNEL                  7
+#define NUM_CHANNEL                  6
 #define FILE_NAME                    "config.txt"
 #define BACKUP_NAME                  "backup.txt"
 #define LOGFILE                      "watering.log"

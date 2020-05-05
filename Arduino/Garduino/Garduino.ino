@@ -10,6 +10,8 @@
 #include <TimeLib.h>
 #include <DS3232RTC.h>
 
+#include <AM232X.h>
+
 #include <FileConfig.h>
 #include <FileConfigHelper.h>
 
@@ -47,6 +49,8 @@ LCDMenuLib2 LCDML(LCDML_0, LCDML_DISP_ROWS, LCDML_DISP_COLS, lcdml_menu_display,
 // Log file
 File logFile;
 
+AM232X am2321;
+
 // Channel storage
 Channel channel[NUM_CHANNEL];
 
@@ -61,6 +65,10 @@ byte click_count = 0;
 
 // SD initialized
 volatile bool sdReady = false;
+
+// Sensor readings
+float temperature_intern = 0.0;
+float humidity_intern = 0.0;
 
 
 // *****************************************************************************
@@ -213,9 +221,46 @@ void setupIOs() {
       pinMode(channel[i].brightness.input, INPUT);
     }
   }
+  
   pinMode(PUMP_PIN, OUTPUT);
   digitalWrite(PUMP_PIN, HIGH);
+
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  pinMode(SD_CD_PIN, INPUT);
+  pinMode(FLOW_PIN, INPUT);
+  
   Serial.println(F("Done"));
+}
+
+void readSensor() {
+  unsigned long current_time = millis();
+  static unsigned long last_time = current_time;
+
+  if (current_time - last_time > 10000) {
+    Serial.print(F("[MEGA2560] Read temperature/humidity..."));
+    if (am2321.read() == AM232X_OK) {
+      temperature_intern = am2321.getTemperature();
+      humidity_intern  = am2321.getHumidity();
+      Serial.print(F(" ( "));
+      Serial.print(temperature_intern, 1);
+      Serial.print(F("°C | "));
+      Serial.print(humidity_intern, 1);
+      Serial.println(F("% )"));
+
+      if (temperature_intern > 30.0) {
+        digitalWrite(FAN_PIN, LOW);
+      }
+      else if (temperature_intern < 25.0) {
+        digitalWrite(FAN_PIN, HIGH);
+      }
+    }
+    else {
+      Serial.println(F("Failed"));
+    }
+    last_time = current_time;
+  }
 }
 
 bool readRequest (Stream& stream, String& request) {
@@ -323,12 +368,12 @@ void setup() {
   Serial.println();  
 
   // Initialize LCD
-  Serial.print(F("[MEGA2560] Initializing LCD..."));
+  Serial.print(F("[MEGA2560] Initializing LCD......"));
   initMenu();
   Serial.println(F("Done"));
 
   // Initiialize RTC
-  Serial.print(F("[MEGA2560] Initializing RTC..."));
+  Serial.print(F("[MEGA2560] Initializing RTC......"));
   setSyncProvider(RTC.get);
   if (timeStatus() != timeSet) {
      Serial.println("Failed");
@@ -357,7 +402,7 @@ void setup() {
   }
 
   // Attach interrupts
-  Serial.print(F("[MEGA2560] Attach interrupts..."));
+  Serial.print(F("[MEGA2560] Attach interrupts....."));
   attachInterrupt(digitalPinToInterrupt(SD_CD_PIN), sdDetectInterrupt, FALLING);
   attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
   Serial.println(F("Done"));
@@ -506,6 +551,7 @@ void loop() {
     digitalWrite(channel[i].output, !(channel[i].active && !channel[i].skip));
   }
 
+  // Activate pump
   if ((channel[0].active && !channel[0].skip) ||
       (channel[1].active && !channel[1].skip) ||
       (channel[2].active && !channel[2].skip) ||
@@ -515,6 +561,9 @@ void loop() {
   else {
     digitalWrite(PUMP_PIN, HIGH);
   }
+
+  // Read temperature sensor
+  readSensor();
 
   // Handle request from webserver
   handleRequest(Serial3);

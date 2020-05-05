@@ -9,6 +9,7 @@
 // Global variables
 // *****************************************************************************
 
+const char DEG[] = { 0xB0, '\0' };
 unsigned long timer = 0;
 
 File dataFile;
@@ -438,15 +439,15 @@ void mFunc_home(uint8_t param) {
       sprintf (date_buf, "%02d.%02d.%d", day(t), month(t), year(t));
       sprintf (time_buf, "%02d:%02d:%02d", hour(t), minute(t), second(t));
 
-      dateOffset = 34;
-      timeOffset = 40;
+      dateOffset = 26;
+      timeOffset = 32;
     }
     else {
       sprintf (date_buf, "%s", "Date not set!");
       sprintf (time_buf, "%s", "Time not set!");
 
-      dateOffset = 25;
-      timeOffset = 25;
+      dateOffset = 15;
+      timeOffset = 15;
     }
 
     // Display current flow
@@ -463,7 +464,7 @@ void mFunc_home(uint8_t param) {
     }
 
     // Display next execution on homescreen
-    byte nextChannel = -1;
+    byte nextChannel = 255;
     time_t nextExec = -1;
     for(byte i = 0; i < NUM_CHANNEL; i++) {
       time_t currentExec = channel[i].time.getNextStartTime(now());
@@ -482,21 +483,38 @@ void mFunc_home(uint8_t param) {
     }
 
     String nextString(F("Next  : "));
-    if (nextChannel != -1) {
+    if (nextChannel != 255) {
       nextString.concat(F("Ch"));
       nextString.concat(nextChannel);
       nextString.concat(' ');
       nextString.concat(fromTime(channel[nextChannel].time.start_time));
     }
 
+    String temperatureString(temperature_intern, 1);
+    temperatureString.concat(DEG);
+    temperatureString.concat('C');
+
+    String humidityString(humidity_intern, 1);
+    humidityString.concat('%');
+
     u8g2.setFont(LCDML_DISP_FONT);
     u8g2.firstPage();
     do {
-      u8g2.drawStr(dateOffset, (LCDML_DISP_FONT_H * 1), date_buf);
-      u8g2.drawStr(timeOffset, (LCDML_DISP_FONT_H * 2), time_buf);
-      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 3), flowString.c_str());
-      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 4), activeString.c_str());
-      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 5), nextString.c_str());
+      u8g2.drawHLine(LCDML_DISP_BOX_X0, LCDML_DISP_BOX_Y0, LCDML_DISP_WIDTH);
+      
+      u8g2.setFont(LCDML_DISP_FONT);
+      u8g2.drawStr( dateOffset, (LCDML_DISP_FONT_H * 1), date_buf);
+      u8g2.drawStr( timeOffset, (LCDML_DISP_FONT_H * 2), time_buf);
+
+      u8g2.drawHLine(LCDML_DISP_BOX_X0, (LCDML_DISP_FONT_H * 2) + 4, LCDML_DISP_WIDTH);
+      
+      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 3) + 3, flowString.c_str());
+      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 4) + 3, activeString.c_str());
+      u8g2.drawStr( 0, (LCDML_DISP_FONT_H * 5) + 3, nextString.c_str());
+
+      u8g2.setFont(u8g2_font_5x8_tf);
+      u8g2.drawStr(98,  8, temperatureString.c_str());
+      u8g2.drawStr(98, 16, humidityString.c_str());
     } while( u8g2.nextPage() );
 
     // Leave homescreen if any button is pressed
