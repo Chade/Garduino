@@ -63,6 +63,10 @@ unsigned long delayCounter = 0;
 // Counter for menu clicks
 byte click_count = 0;
 
+// Unsaved changes
+bool dirty_eeprom = false;
+bool dirty_sdcard = false;
+
 // SD initialized
 volatile bool sdReady = false;
 
@@ -75,7 +79,12 @@ float humidity_intern = 0.0;
 // Functions
 // *****************************************************************************
 
-bool parseConfig(const byte& idx){
+void markDirty(bool eeprom, bool sdcard) {
+  dirty_eeprom = eeprom;
+  dirty_sdcard = sdcard;
+}
+
+bool parseConfig(const byte& idx) {
   FileConfig configFile(SD.open(FILE_NAME, FILE_READ));
 
   if(configFile) {
@@ -376,7 +385,7 @@ void setup() {
   Serial.print(F("[MEGA2560] Initializing RTC......"));
   setSyncProvider(RTC.get);
   if (timeStatus() != timeSet) {
-     Serial.println("Failed");
+     Serial.println(F("Failed"));
   }
   else {
     Serial.println(F("Done"));
@@ -457,7 +466,7 @@ void loop() {
 
       // Check flow counter to deactivate channel
       if (channel[i].active && channel[i].flow.count > 0) {
-        channel[i].active = channel[i].flow.active(flowCounter);
+        channel[i].active &= channel[i].flow.active(flowCounter);
       }
 
       // Check movement sensor to deactivate channel
@@ -525,7 +534,7 @@ void loop() {
           digitalWrite(channel[i].signal, (millis()%3000 < 200) );
         }
         else if (channel[i].time.active(now())) {
-          if (!channel[i].active) {  // Executen prohibited by some sensor
+          if (!channel[i].active) {  // Execute prohibited by some sensor
             digitalWrite(channel[i].signal, (millis()%1000 < 50) );
           }
           else {

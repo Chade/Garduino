@@ -61,8 +61,6 @@
 #define CONTROL_BUTTON_LONG_PRESS    800   // ms
 #define CONTROL_BUTTON_SHORT_PRESS   120   // ms
 
-#define MOVEMENT_DECAY               60    // ms
-
 // *****************************************************************************
 // Constants
 // *****************************************************************************

@@ -86,6 +86,8 @@ void mDyn_ch_enable(uint8_t line) {
       channel[current].enabled = !channel[current].enabled;
       channel[current].skip = false;
     }
+    dirty_eeprom = true;
+    dirty_sdcard = true;
     LCDML.BT_resetAll();
   }
 
@@ -177,6 +179,7 @@ void mDyn_ch_start(uint8_t line) {
         default:
           ;
       }
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
@@ -194,6 +197,7 @@ void mDyn_ch_start(uint8_t line) {
         default:
           ;
       }
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -219,11 +223,13 @@ void mDyn_ch_duration(uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       duration = (duration < 999) ? duration + 1 : 999;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       duration = (duration > 0) ? duration - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -249,11 +255,13 @@ void mDyn_ch_repeat(uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       repeat = (repeat < 23) ? repeat + 1 : 23;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       repeat = (repeat > 0) ? repeat - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -278,11 +286,13 @@ void mDyn_ch_flow (uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       count = (count < 9990) ? count + 10 : 9999;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       count = (count > 9) ? count - 10 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -304,6 +314,7 @@ void mDyn_moist_enable (uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
     channel[current].moisture.enabled = !channel[current].moisture.enabled;
+    markDirty(true, true);
     LCDML.BT_resetAll();
   }
 
@@ -319,6 +330,7 @@ void mDyn_moist_invert (uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
     channel[current].moisture.inverted = !channel[current].moisture.inverted;
+    markDirty(true, true);
     LCDML.BT_resetAll();
   }
 
@@ -337,11 +349,13 @@ void mDyn_moist_low (uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       threshold = (threshold > 0) ? threshold - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -363,11 +377,13 @@ void mDyn_moist_high (uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       threshold = (threshold > 0) ? threshold - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -390,6 +406,7 @@ void mDyn_rain_enable (uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
     channel[current].rain.enabled = !channel[current].rain.enabled;
+    markDirty(true, true);
     LCDML.BT_resetAll();
   }
 
@@ -405,6 +422,7 @@ void mDyn_rain_invert (uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
     channel[current].rain.inverted = !channel[current].rain.inverted;
+    markDirty(true, true);
     LCDML.BT_resetAll();
   }
 
@@ -423,11 +441,13 @@ void mDyn_rain_low (uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       threshold = (threshold > 0) ? threshold - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -449,11 +469,13 @@ void mDyn_rain_high (uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       threshold = (threshold > 0) ? threshold - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -476,6 +498,7 @@ void mDyn_bright_enable (uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
     channel[current].brightness.enabled = !channel[current].brightness.enabled;
+    markDirty(true, true);
     LCDML.BT_resetAll();
   }
 
@@ -491,6 +514,7 @@ void mDyn_bright_invert (uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
     channel[current].brightness.inverted = !channel[current].brightness.inverted;
+    markDirty(true, true);
     LCDML.BT_resetAll();
   }
 
@@ -509,11 +533,13 @@ void mDyn_bright_low (uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       threshold = (threshold > 0) ? threshold - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -535,11 +561,13 @@ void mDyn_bright_high (uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       threshold = (threshold < 1024) ? threshold + 1 : 1024;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       threshold = (threshold > 0) ? threshold - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }
@@ -562,6 +590,7 @@ void mDyn_move_enable (uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
     channel[current].movement.enabled = !channel[current].movement.enabled;
+    markDirty(true, true);
     LCDML.BT_resetAll();
   }
 
@@ -577,6 +606,7 @@ void mDyn_move_invert (uint8_t line) {
   // Check if this function is active (cursor is on this line)
   if (isSelected(line) && LCDML.BT_checkAny()) {
     channel[current].movement.inverted = !channel[current].movement.inverted;
+    markDirty(true, true);
     LCDML.BT_resetAll();
   }
 
@@ -595,11 +625,13 @@ void mDyn_move_wait (uint8_t line) {
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
       duration = (duration < 999) ? duration + 1 : 999;
+      markDirty(true, true);
       LCDML.BT_resetUp();
     }
 
     if (LCDML.BT_checkDown()) {
       duration = (duration > 0) ? duration - 1 : 0;
+      markDirty(true, true);
       LCDML.BT_resetDown();
     }
   }

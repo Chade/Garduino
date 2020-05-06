@@ -258,6 +258,7 @@ void mFunc_readSD(uint8_t param) {
 
   if(LCDML.FUNC_close())      // ****** STABLE END *********
   {
+    markDirty(true, false);
     setupIOs();
   }
 }
@@ -320,6 +321,7 @@ void mFunc_writeSD(uint8_t param) {
 
   if(LCDML.FUNC_close())      // ****** STABLE END *********
   {
+    markDirty(dirty_eeprom, false);
     dataFile.close();
   }
 }
@@ -363,6 +365,7 @@ void mFunc_readEEPROM(uint8_t param) {
 
   if(LCDML.FUNC_close())      // ****** STABLE END *********
   {
+    markDirty(false, true);
     setupIOs();
   }
 }
@@ -410,6 +413,7 @@ void mFunc_writeEEPROM(uint8_t param) {
 
   if(LCDML.FUNC_close())      // ****** STABLE END *********
   {
+    markDirty(false, dirty_sdcard);
     dataFile.close();
   }
 }
@@ -515,6 +519,19 @@ void mFunc_home(uint8_t param) {
       u8g2.setFont(u8g2_font_5x8_tf);
       u8g2.drawStr(98,  8, temperatureString.c_str());
       u8g2.drawStr(98, 16, humidityString.c_str());
+
+      if (dirty_sdcard || dirty_eeprom) {
+        u8g2.setFont(u8g2_font_iconquadpix_m_all);
+        u8g2.drawGlyph( 108, 44, 0x0042);
+      }
+      if (dirty_sdcard) {
+        u8g2.setFont(u8g2_font_4x6_tf);
+        u8g2.drawStr(121, 37, "SD");
+      }
+      if (dirty_eeprom) {
+        u8g2.setFont(u8g2_font_4x6_tf);
+        u8g2.drawStr(121, 44, "EE");
+      }
     } while( u8g2.nextPage() );
 
     // Leave homescreen if any button is pressed
