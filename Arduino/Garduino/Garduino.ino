@@ -315,18 +315,48 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
 
           if (key == F("enabled")) {
             channel[channelIdx].enable(toBool(value));
+            streamOut.print("[ESP8266]  Enable Channel");
+            streamOut.println(channelIdx);
           }
           else if (key == F("skip")) {
             channel[channelIdx].doSkip(toBool(value));
+            streamOut.print("[ESP8266]  Skip Channel");
+            streamOut.println(channelIdx);
+          }
+          else if (key == F("state")) {
+            bool requestActive = toBool(value);
+              if(!channel[channelIdx].active && requestActive) {
+                streamOut.print("[ESP8266]  Activate Channel");
+                channel[channelIdx].enabled = false;
+                channel[channelIdx].active = true;
+                channel[channelIdx].skip = false;
+              }
+              else if(channel[channelIdx].active && !requestActive) {
+                streamOut.print("[ESP8266]  Deactivate Channel");
+                channel[channelIdx].active = false;
+                if (channel[channelIdx].enabled) {
+                  channel[channelIdx].skip = true;
+                }
+                else {
+                  channel[channelIdx].enabled = true;
+                }
+              }
+              streamOut.println(channelIdx);
           }
           else if (key == F("time")) {
             channel[channelIdx].time.setStartTime(toTime(value));
+            streamOut.print("[ESP8266]  Set StartTime Channel");
+            streamOut.println(channelIdx);
           }
           else if (key == F("duration")) {
             channel[channelIdx].time.setDuration(toSeconds(value));
+            streamOut.print("[ESP8266]  Set Duration Channel");
+            streamOut.println(channelIdx);
           }
           else if (key == F("repeat")) {
             channel[channelIdx].time.setRepeat(toSeconds(value));
+            streamOut.print("[ESP8266]  Set Repeat Channel");
+            streamOut.println(channelIdx);
           }
 
           startIdx = endIdx;
@@ -520,13 +550,19 @@ void loop() {
             channel[i].skip = !channel[i].skip;
           }
           else{
-            // Toggle skip
+            // Toggle active
             channel[i].active = !channel[i].active;
           }
         }
       }
     }
+  }
 
+  // Handle request from webserver
+  handleRequest(Serial3);
+
+  // Set outputs
+  for (byte i = 0; i < NUM_CHANNEL; i++) {
     // Update signals
     if (channel[i].signal != 0) {
       if (channel[i].enabled) {
@@ -573,9 +609,6 @@ void loop() {
 
   // Read temperature sensor
   readSensor();
-
-  // Handle request from webserver
-  handleRequest(Serial3);
 
   // Update display
   updateMenu();

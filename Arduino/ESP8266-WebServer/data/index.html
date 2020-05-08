@@ -38,10 +38,16 @@
           }
 
           if (responseState = "skip") {
-            document.getElementById("skip" + idx).checked = true;
+            document.getElementById("state" + idx).checked = false;
+	    document.getElementById("skip"  + idx).checked = true;
           }
+	  else if (responseState = "active") {
+	    document.getElementById("state" + idx).checked = true;
+	    document.getElementById("skip"  + idx).checked = false;
+	  }
           else {
-            document.getElementById("skip" + idx).checked = false;
+            document.getElementById("state" + idx).checked = false;
+	    document.getElementById("skip"  + idx).checked = false;
           }
         }
       }
@@ -85,29 +91,35 @@
 
         for (var i = 0; i <channel.length; i++) {
           var idx = channel[i].getAttribute('id');
-          var enabled = channel[i].getElementsByTagName("enabled")[0].childNodes[0].nodeValue;
-          var state = channel[i].getElementsByTagName("state")[0].childNodes[0].nodeValue;
-          var startTime = channel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
-          var duration = channel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
-          var repeat = channel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue;
+          var requestEnabled = channel[i].getElementsByTagName("enabled")[0].childNodes[0].nodeValue;
+          var requestState = channel[i].getElementsByTagName("state")[0].childNodes[0].nodeValue;
+          var requestStartTime = channel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
+          var requestDuration = channel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
+          var requestRepeat = channel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue;
 
           var buttonEnabled = "<label class=\"switch\"><input id=\"enabled" + idx + "\" name=\"enabled\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
-          if (enabled == "true") {
+          if (requestEnabled == "true") {
             buttonEnabled += "checked";
           }
           buttonEnabled += "><span class=\"slider round\"></span></label>"
+	  
+	  var buttonState = "<label class=\"switch\"><input id=\"state" + idx + "\" name=\"state\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
+          if (requestState == "active") {
+            buttonState += "checked";
+          }
+          buttonState += "><span class=\"slider round\"></span></label>"
 
           var buttonSkip = "<label class=\"switch\"><input id=\"skip" + idx + "\" name=\"skip\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
-          if (state == "skip") {
+          if (requestState == "skip") {
             buttonSkip += "checked"
           }
           buttonSkip += "><span class=\"slider round\"></span></label>"
 
-          var editTime     = "<input id=\"time"     + idx + "\" name=\"time\"     type=\"time\"   value=\"" + startTime + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-          var editDuration = "<input id=\"duration" + idx + "\" name=\"duration\" type=\"number\" value=\"" + duration  + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-          var editRepeat   = "<input id=\"repeat"   + idx + "\" name=\"repeat\"   type=\"number\" value=\"" + repeat    + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
+          var editTime     = "<input id=\"time"     + idx + "\" name=\"time\"     type=\"time\"   value=\"" + requestStartTime + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
+          var editDuration = "<input id=\"duration" + idx + "\" name=\"duration\" type=\"number\" value=\"" + requestDuration  + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
+          var editRepeat   = "<input id=\"repeat"   + idx + "\" name=\"repeat\"   type=\"number\" value=\"" + requestRepeat    + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
 
-          table += "<tr><td>" + idx + "</td><td>" + buttonEnabled + "</td><td>" + state + "</td><td>" + editTime + "</td><td>" +  editDuration + "</td><td>" + editRepeat + "</td><td>" + buttonSkip + "</td></tr>";
+          table += "<tr><td>" + idx + "</td><td>" + buttonEnabled + "</td><td>" + buttonState + "</td><td>" + editTime + "</td><td>" +  editDuration + "</td><td>" + editRepeat + "</td><td>" + buttonSkip + "</td></tr>";
         }
         document.getElementById("channels").innerHTML = table;
       };
