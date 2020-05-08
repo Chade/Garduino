@@ -234,6 +234,9 @@ void setupIOs() {
   pinMode(PUMP_PIN, OUTPUT);
   digitalWrite(PUMP_PIN, HIGH);
 
+  pinMode(FAN_PIN, OUTPUT);
+  digitalWrite(FAN_PIN, HIGH);
+
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
@@ -245,7 +248,7 @@ void setupIOs() {
 
 void readSensor() {
   unsigned long current_time = millis();
-  static unsigned long last_time = current_time;
+  static unsigned long last_time = 0;
 
   if (current_time - last_time > 10000) {
     Serial.print(F("[MEGA2560] Read temperature/humidity..."));
@@ -256,12 +259,14 @@ void readSensor() {
       Serial.print(temperature_intern, 1);
       Serial.print(F("°C | "));
       Serial.print(humidity_intern, 1);
-      Serial.println(F("% )"));
+      Serial.print(F("% )"));
 
       if (temperature_intern > 30.0) {
+        Serial.println(F(": Fan ON"));
         digitalWrite(FAN_PIN, LOW);
       }
       else if (temperature_intern < 25.0) {
+        Serial.println(F(": Fan OFF"));
         digitalWrite(FAN_PIN, HIGH);
       }
     }
