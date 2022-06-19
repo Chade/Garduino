@@ -293,7 +293,7 @@ void mDyn_ch_setpoint(uint8_t line) {
   }
 
   char buf[LCDML_DISP_COLS];
-  sprintf (buf, "Setpoint:%7s", channel[current].time.getAdjustSetpoint().c_str());
+  sprintf (buf, "Setpoint:%s", channel[current].time.getAdjustSetpoint().c_str());
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf);
   if(isSelected(line)) {

@@ -10,7 +10,7 @@
 // *****************************************************************************
 
 #define BAUD_RATE                    115200
-#define READ_FROM_EEPROM
+//#define READ_FROM_EEPROM
 
 // *****************************************************************************
 // Pins
@@ -171,12 +171,7 @@ public:
   signed_time_t adjustOffset = 0;
 
   enum setpoint_enum {ENone = 0, ESunrise = 1, ENoon = 2, ESunset = 3};
-  
-  const char setpoint0[8] = "none";
-  const char setpoint1[8] = "sunrise";
-  const char setpoint2[8] = "noon";
-  const char setpoint3[8] = "sunset";
-  const char * const setpoint_names[4] = {setpoint0, setpoint1, setpoint2, setpoint3};
+  const char * const setpoint_names[4] = {"none", "sunrise", "noon", "sunset"};
 
 public:
   void print(Stream &stream, const String &name) {
@@ -257,15 +252,16 @@ public:
     return repeat;
   }
 
-  void setAdjustSetpoint(const String& new_setpoint)
+  void setAdjustSetpoint(String new_setpoint)
   {
-    if (new_setpoint.equalsIgnoreCase(String(setpoint_names[ESunrise]))) {
+    new_setpoint.trim();
+    if (new_setpoint.equalsIgnoreCase("sunrise")) {
       adjustSetpoint = ESunrise;
     }
-    else if (new_setpoint.equalsIgnoreCase(String(setpoint_names[ENoon]))) {
+    else if (new_setpoint.equalsIgnoreCase("noon")) {
       adjustSetpoint = ENoon;
     }
-    else if (new_setpoint.equalsIgnoreCase(String(setpoint_names[ESunset]))) {
+    else if (new_setpoint.equalsIgnoreCase("sunset")) {
       adjustSetpoint = ESunset;
     }
     else {

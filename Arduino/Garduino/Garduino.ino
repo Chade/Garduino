@@ -188,6 +188,7 @@ bool parseConfig(const byte& idx) {
     channel[idx].brightness.threshold_high = value.toInt();
 
     configFile.close();
+    
     return true;
   }
 
@@ -447,6 +448,7 @@ void setup() {
 
   // Initiialize RTC
   Serial.print(F("[MEGA2560] Initializing RTC......"));
+  RTC.begin();
   setSyncProvider(RTC.get);
   if (timeStatus() != timeSet) {
      Serial.println(F("Failed"));
