@@ -10,6 +10,9 @@ TimeStart = 21:00:00
 TimeDuration = 00:15:00
 TimeRepeat = 00:00:00
 
+SunAdjustSetpoint = none
+SunAdjustOffset = 0
+
 FlowCount = 0
 
 MovementEnabled = false
@@ -45,6 +48,9 @@ SignalPin = 31
 TimeStart = 21:15:00
 TimeDuration = 00:10:00
 TimeRepeat = 00:00:00
+
+SunAdjustSetpoint = none
+SunAdjustOffset = 0
 
 FlowCount = 0
 
@@ -82,6 +88,9 @@ TimeStart = 21:25:00
 TimeDuration = 00:15:00
 TimeRepeat = 00:00:00
 
+SunAdjustSetpoint = none
+SunAdjustOffset = 0
+
 FlowCount = 0
 
 MovementEnabled = false
@@ -117,6 +126,9 @@ SignalPin = 33
 TimeStart = 21:15:15
 TimeDuration = 00:05:00
 TimeRepeat = 00:00:00
+
+SunAdjustSetpoint = none
+SunAdjustOffset = 0
 
 FlowCount = 0
 
@@ -154,6 +166,9 @@ TimeStart = 21:20:00
 TimeDuration = 00:05:00
 TimeRepeat = 00:00:00
 
+SunAdjustSetpoint = none
+SunAdjustOffset = 0
+
 FlowCount = 0
 
 MovementEnabled = false
@@ -189,6 +204,9 @@ SignalPin = 0
 TimeStart = 21:25:00
 TimeDuration = 00:05:00
 TimeRepeat = 00:00:00
+
+SunAdjustSetpoint = none
+SunAdjustOffset = 0
 
 FlowCount = 0
 

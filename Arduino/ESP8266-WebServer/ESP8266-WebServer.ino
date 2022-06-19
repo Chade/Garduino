@@ -7,8 +7,7 @@
 
 // Replace with your network credentials
 const char* ssid     = "Jungholz";
-const char* password = "45299115630418744911";
-
+const char* password = "20230562558816153495";
 
 // Set web server port number to 80
 ESP8266WebServer server(80);
@@ -16,8 +15,23 @@ ESP8266WebServer server(80);
 
 // Route for root / web page
 void handleRoot(){
-  File file = SPIFFS.open("/index.html", "r");
-  server.streamFile(file, "text/html");
+  Serial.print("Serving index.html...");
+  if (SPIFFS.exists("/index.html")) {
+    File file = SPIFFS.open("/index.html", "r");
+    if (file.available()) {
+      size_t size = server.streamFile(file, "text/html");
+      Serial.println(size);
+    }
+    else {
+      server.send(404, "text/plain", "Site not available");
+      Serial.println("Could not read index.html");
+    }
+    file.close(); 
+  }
+  else {
+    server.send(404, "text/plain", "Site could not be found");
+    Serial.println("Could not find index.html");
+  }
 }
 
 // Route for xml requests

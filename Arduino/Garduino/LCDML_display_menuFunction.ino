@@ -48,7 +48,7 @@ void mFunc_set_clock(uint8_t param) {
     LCDML.FUNC_disableScreensaver();
     LCDML.TIMER_msReset(timer);
     LCDML.FUNC_setLoopInterval(100);  // starts a trigger event for the loop function every 100 milliseconds
-    breakTime(now(), dateTime);
+    breakTime(timezone.toLocal(now()), dateTime);
   }
 
   if(LCDML.FUNC_loop())       // ****** LOOP *********
@@ -203,8 +203,8 @@ void mFunc_set_clock(uint8_t param) {
 
   if(LCDML.FUNC_close())      // ****** END *********
   {
-    RTC.set(makeTime(dateTime));
-    setTime(makeTime(dateTime));
+    RTC.set(timezone.toUTC(makeTime(dateTime)));
+    setTime(timezone.toUTC(makeTime(dateTime)));
   }
 }
 
@@ -431,7 +431,7 @@ void mFunc_home(uint8_t param) {
 
   // Loop
   if(LCDML.FUNC_loop()) {
-    time_t t = now();
+    time_t t = timezone.toLocal(now());
     byte dateOffset = 0;
     byte timeOffset = 0;
     char date_buf[14];
@@ -471,8 +471,8 @@ void mFunc_home(uint8_t param) {
     byte nextChannel = 255;
     time_t nextExec = -1;
     for(byte i = 0; i < NUM_CHANNEL; i++) {
-      time_t currentExec = channel[i].time.getNextStartTime(now());
-      if(currentExec < elapsedSecsToday(now())) {
+      time_t currentExec = channel[i].time.getNextStartTime(timezone.toLocal(now()));
+      if(currentExec < elapsedSecsToday(timezone.toLocal(now()))) {
         currentExec += SECS_PER_DAY;
       }
 

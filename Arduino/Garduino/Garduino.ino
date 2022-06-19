@@ -8,6 +8,7 @@
 #include <Wire.h>
 
 #include <TimeLib.h>
+#include <Timezone.h>
 #include <DS3232RTC.h>
 
 #include <AM232X.h>
@@ -19,6 +20,7 @@
 #include <LCDMenuLib2.h>
 
 #include "Garduino.h"
+#include "SunCalender.h"
 
 
 // *****************************************************************************
@@ -51,6 +53,13 @@ File logFile;
 
 AM232X am2321;
 
+DS3232RTC RTC;
+
+TimeChangeRule *tcr;
+TimeChangeRule timeSommer = {"CEST", Last, Sun, Mar, 2, UTC2CEST};    // Daylight saving time = UTC +2 hours
+TimeChangeRule timeWinter = {"CET",  Last, Sun, Oct, 3,  UTC2CET};    //        Standard time = UTC +1 hours
+Timezone timezone(timeSommer, timeWinter);
+
 // Channel storage
 Channel channel[NUM_CHANNEL];
 
@@ -73,7 +82,6 @@ volatile bool sdReady = false;
 // Sensor readings
 float temperature_intern = 0.0;
 float humidity_intern = 0.0;
-
 
 // *****************************************************************************
 // Functions
@@ -112,6 +120,12 @@ bool parseConfig(const byte& idx) {
 
     value = configFile.getValue(F("TimeRepeat"), header);
     channel[idx].time.repeat = toSeconds(value);
+
+    value = configFile.getValue(F("TimeAdjustSetpoint"), header);
+    channel[idx].time.setAdjustSetpoint(value);
+
+    value = configFile.getValue(F("TimeAdjustOffset"), header);
+    channel[idx].time.adjustOffset = toSignedSeconds(value);
 
     value = configFile.getValue(F("FlowCount"), header);
     channel[idx].flow.count = value.toInt();
@@ -244,6 +258,12 @@ void setupIOs() {
   pinMode(FLOW_PIN, INPUT);
   
   Serial.println(F("Done"));
+
+  // Attach interrupts
+  Serial.print(F("[MEGA2560] Attach interrupts....."));
+  attachInterrupt(digitalPinToInterrupt(SD_CD_PIN), sdDetectInterrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
+  Serial.println(F("Done"));
 }
 
 void readSensor() {
@@ -363,7 +383,16 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
             streamOut.print("[ESP8266]  Set Repeat Channel");
             streamOut.println(channelIdx);
           }
-
+          else if (key == F("setpoint")) {
+            channel[channelIdx].time.setAdjustSetpoint(value);
+            streamOut.print("[ESP8266]  Set AdjustSetpoint Channel");
+            streamOut.println(channelIdx);
+          }
+          else if (key == F("offset")) {
+            channel[channelIdx].time.setAdjustOffset(toSignedSeconds(value));
+            streamOut.print("[ESP8266]  Set AdjustOffset Channel");
+            streamOut.println(channelIdx);
+          }
           startIdx = endIdx;
         } while (endIdx < request.length());
 
@@ -428,11 +457,13 @@ void setup() {
 
   // Write boot notice to log
   Serial.print(F("[MEGA2560] Write notice to log..."));
-  if(SD.begin(SD_CS_PIN)) {
+  sdReady = SD.begin(SD_CS_PIN);
+  if(sdReady) {
     logFile = SD.open(LOGFILE, (O_READ | O_WRITE | O_CREAT | O_APPEND));
     if (logFile) {
       char string_buf[40];
-      sprintf (string_buf, "[%d.%02d.%02d|%02d:%02d:%02d]Booted", year(now()), month(now()), day(now()), hour(now()), minute(now()), second(now()));
+      time_t localtime_unix = timezone.toLocal(now());
+      sprintf (string_buf, "[%d.%02d.%02d|%02d:%02d:%02d]Booted", year(localtime_unix), month(localtime_unix), day(localtime_unix), hour(localtime_unix), minute(localtime_unix), second(localtime_unix));
       logFile.println(string_buf);
       logFile.close();
       Serial.println(F("Done"));
@@ -440,20 +471,18 @@ void setup() {
     else {
       Serial.println(F("Error opening file"));
     }
+#ifndef READ_FROM_EEPROM
+    LCDML.OTHER_jumpToFunc(mFunc_readSD);
+#endif
   }
   else {
     Serial.println(F("Error starting SD"));
   }
 
-  // Attach interrupts
-  Serial.print(F("[MEGA2560] Attach interrupts....."));
-  attachInterrupt(digitalPinToInterrupt(SD_CD_PIN), sdDetectInterrupt, FALLING);
-  attachInterrupt(digitalPinToInterrupt(FLOW_PIN), flowCounterInterrupt, RISING);
-  Serial.println(F("Done"));
-
   // Parse config file
-  //LCDML.OTHER_jumpToFunc(mFunc_readSD);
+#ifdef READ_FROM_EEPROM
   LCDML.OTHER_jumpToFunc(mFunc_readEEPROM);
+#endif
 }
 
 
@@ -467,8 +496,33 @@ void loop() {
   
   for (byte i = 0; i < NUM_CHANNEL; i++) {
     if (channel[i].enabled) {
+      // Check if we have to adjust start time if adjustment based on sunrise/sunset is enabled
+      if(channel[i].time.isAdjustEnabled() ) {
+        time_t sunrise_localtime_unix, sunset_localtime_unix;
+        time_t localtime_unix = timezone.toLocal(now(), &tcr);
+        double timezone_offset = tcr->offset / SECS_PER_MIN;
+
+        // Check, if next start is scheduled for today or tomorrow
+        if (elapsedSecsToday(localtime_unix) > channel[i].time.getNextStartTime(localtime_unix)) {
+          localtime_unix += SECS_PER_DAY;
+        }
+
+        // Get sunrise and sunset times
+        sunCalender(sunrise_localtime_unix, sunset_localtime_unix, localtime_unix, LATITUDE * M_DEG2RAD, LONGITUDE * M_DEG2RAD, timezone_offset);
+
+        if(channel[i].time.adjustSetpoint == Timer::ESunrise) {
+          channel[i].time.start_time = channel[i].time.adjustOffset + elapsedSecsToday(sunrise_localtime_unix);
+        }
+        else if(channel[i].time.adjustSetpoint == Timer::ESunset) {
+          channel[i].time.start_time = channel[i].time.adjustOffset + elapsedSecsToday(sunset_localtime_unix);
+        }
+        else if(channel[i].time.adjustSetpoint == Timer::ENoon) {
+          channel[i].time.start_time = channel[i].time.adjustOffset + (elapsedSecsToday(sunset_localtime_unix) - elapsedSecsToday(sunrise_localtime_unix)) / 2.0;
+        }
+      }
+      
       // Check timer
-      channel[i].active = channel[i].time.active(now());
+      channel[i].active = channel[i].time.active(timezone.toLocal(now()));
 
       if (channel[i].active != channel[i].was_active) {
         if (channel[i].was_active) {
@@ -478,7 +532,8 @@ void loop() {
             char string_buf[40];
             if (logFile) {
               float liter = (flowCounter - channel[i].flow.start_count)/FLOW_CONV;
-              sprintf (string_buf, "[%d.%02d.%02d|%02d:%02d:%02d](Ch%02d)", year(now()), month(now()), day(now()), hour(channel[i].time.start_time), minute(channel[i].time.start_time), second(channel[i].time.start_time), i);
+              time_t localtime_unix = timezone.toLocal(now());
+              sprintf (string_buf, "[%d.%02d.%02d|%02d:%02d:%02d](Ch%02d)", year(localtime_unix), month(localtime_unix), day(localtime_unix), hour(channel[i].time.start_time), minute(channel[i].time.start_time), second(channel[i].time.start_time), i);
               logFile.print(string_buf);
               if (channel[i].skip == true) {
                 logFile.println(F("Skipped"));
@@ -574,7 +629,7 @@ void loop() {
         if (channel[i].skip) {
           digitalWrite(channel[i].signal, (millis()%3000 < 200) );
         }
-        else if (channel[i].time.active(now())) {
+        else if (channel[i].time.active(timezone.toLocal(now()))) {
           if (!channel[i].active) {  // Execute prohibited by some sensor
             digitalWrite(channel[i].signal, (millis()%1000 < 50) );
           }
@@ -582,7 +637,7 @@ void loop() {
             digitalWrite(channel[i].signal, (millis()%1000 < 500) );
           }
         }
-        else if (channel[i].time.preactive(now(), 60)) {
+        else if (channel[i].time.preactive(timezone.toLocal(now()), 60)) {
           digitalWrite(channel[i].signal, (millis()%200 < 50));
         }
         else {

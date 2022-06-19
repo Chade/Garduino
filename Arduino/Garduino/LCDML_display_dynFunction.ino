@@ -12,7 +12,6 @@
 // Current channel
 byte current = 0;
 
-
 // *****************************************************************************
 // Helper
 // *****************************************************************************
@@ -51,7 +50,6 @@ uint8_t isSelected(const uint8_t& cursorPos, const uint8_t& count = 1) {
 // Select channel
 // *****************************************************************************
 void mDyn_ch_select(uint8_t line) {
-
   // Check if this function is active (cursor is on this line)
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
@@ -200,16 +198,16 @@ void mDyn_ch_start(uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].time.setStartTime(dateTime.Hour, dateTime.Minute, dateTime.Second);
   }
 
-  char buf[18];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "Start   :%02d:%02d:%02d", dateTime.Hour, dateTime.Minute, dateTime.Second);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line, 3)) {
     u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 2), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].time.setStartTime(dateTime.Hour, dateTime.Minute, dateTime.Second);
 }
 
 
@@ -217,8 +215,7 @@ void mDyn_ch_start(uint8_t line) {
 // Set duration
 // *****************************************************************************
 void mDyn_ch_duration(uint8_t line) {
-  static uint8_t col_count = 0;
-  uint32_t duration = channel[current].time.duration / 60;
+  time_t duration = channel[current].time.duration / 60;
 
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
@@ -232,16 +229,16 @@ void mDyn_ch_duration(uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].time.duration = duration * 60;
   }
 
-  char buf[17];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "Duration:%03d min.", duration);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 3), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 10, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 3), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].time.duration = duration * 60;
 }
 
 
@@ -249,8 +246,7 @@ void mDyn_ch_duration(uint8_t line) {
 // Set repeat interval
 // *****************************************************************************
 void mDyn_ch_repeat(uint8_t line) {
-  static uint8_t col_count = 0;
-  uint32_t repeat = channel[current].time.repeat / 3600;
+  time_t repeat = channel[current].time.repeat / 60;
 
   if (isSelected(line)) {
     if (LCDML.BT_checkUp()) {
@@ -264,23 +260,83 @@ void mDyn_ch_repeat(uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].time.repeat = repeat * 60;
   }
 
-  char buf[15];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "Every   :%02d h", repeat);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 3), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 10, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 3), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].time.repeat = repeat * 3600;
 }
+
+
+// *****************************************************************************
+// Set adjust setpoint
+// *****************************************************************************
+void mDyn_ch_setpoint(uint8_t line) {
+  // Check if this function is active (cursor is on this line)
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      channel[current].time.adjustSetpoint = (channel[current].time.adjustSetpoint < 3) ? channel[current].time.adjustSetpoint + 1 : 0;
+      markDirty(true, true);
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      channel[current].time.adjustSetpoint = (channel[current].time.adjustSetpoint > 0) ? channel[current].time.adjustSetpoint - 1 : 3;
+      markDirty(true, true);
+      LCDML.BT_resetDown();
+    }
+  }
+
+  char buf[LCDML_DISP_COLS];
+  sprintf (buf, "Setpoint:%7s", channel[current].time.getAdjustSetpoint().c_str());
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf);
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 10, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 7), LCDML_DISP_FONT_H - 1);
+  }
+}
+
+
+// *****************************************************************************
+// Set adjust offset
+// *****************************************************************************
+void mDyn_ch_offset(uint8_t line) {
+  signed_time_t offset = channel[current].time.adjustOffset / 60;
+
+  if (isSelected(line)) {
+    if (LCDML.BT_checkUp()) {
+      offset = (offset < 999) ? offset + 1 : 999;
+      markDirty(true, true);
+      LCDML.BT_resetUp();
+    }
+
+    if (LCDML.BT_checkDown()) {
+      offset = (offset > -999) ? offset - 1 : -999;
+      markDirty(true, true);
+      LCDML.BT_resetDown();
+    }
+    channel[current].time.adjustOffset = offset * 60;
+  }
+
+  char buf[LCDML_DISP_COLS];
+  sprintf (buf, "Offset  :% 04d min.", offset);
+
+  u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
+  if(isSelected(line)) {
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 10, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+  }
+}
+
 
 // *****************************************************************************
 // Set quantity
 // *****************************************************************************
 void mDyn_ch_flow (uint8_t line) {
-  static uint8_t col_count = 0;
   uint32_t count = channel[current].flow.count;
 
   if (isSelected(line)) {
@@ -295,16 +351,16 @@ void mDyn_ch_flow (uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].flow.count = count;
   }
 
-  char buf[20];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "Quantity:%04d lit.", count);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 10), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 10, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].flow.count = count;
 }
 
 // *****************************************************************************
@@ -343,7 +399,6 @@ void mDyn_moist_invert (uint8_t line) {
 }
 
 void mDyn_moist_low (uint8_t line) {
-  static uint8_t col_count = 0;
   uint16_t threshold = channel[current].moisture.threshold_low;
 
   if (isSelected(line)) {
@@ -358,20 +413,19 @@ void mDyn_moist_low (uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].moisture.threshold_low = threshold;
   }
 
-  char buf[13];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "Low     :%04d", threshold);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].moisture.threshold_low = threshold;
 }
 
 void mDyn_moist_high (uint8_t line) {
-  static uint8_t col_count = 0;
   uint16_t threshold = channel[current].moisture.threshold_high;
 
   if (isSelected(line)) {
@@ -386,16 +440,16 @@ void mDyn_moist_high (uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].moisture.threshold_high = threshold;
   }
 
-  char buf[13];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "High    :%04d", threshold);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].moisture.threshold_high = threshold;
 }
 
 
@@ -435,7 +489,6 @@ void mDyn_rain_invert (uint8_t line) {
 }
 
 void mDyn_rain_low (uint8_t line) {
-  static uint8_t col_count = 0;
   uint16_t threshold = channel[current].rain.threshold_low;
 
   if (isSelected(line)) {
@@ -450,20 +503,19 @@ void mDyn_rain_low (uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].rain.threshold_low = threshold;
   }
 
-  char buf[13];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "Low     :%04d", threshold);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].rain.threshold_low = threshold;
 }
 
 void mDyn_rain_high (uint8_t line) {
-  static uint8_t col_count = 0;
   uint16_t threshold = channel[current].rain.threshold_high;
 
   if (isSelected(line)) {
@@ -478,16 +530,16 @@ void mDyn_rain_high (uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].rain.threshold_high = threshold;
   }
 
-  char buf[13];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "High    :%04d", threshold);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].rain.threshold_high = threshold;
 }
 
 
@@ -527,7 +579,6 @@ void mDyn_bright_invert (uint8_t line) {
 }
 
 void mDyn_bright_low (uint8_t line) {
-  static uint8_t col_count = 0;
   uint16_t threshold = channel[current].brightness.threshold_low;
 
   if (isSelected(line)) {
@@ -542,20 +593,19 @@ void mDyn_bright_low (uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].brightness.threshold_low = threshold;
   }
 
-  char buf[13];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "Low     :%04d", threshold);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].brightness.threshold_low = threshold;
 }
 
 void mDyn_bright_high (uint8_t line) {
-  static uint8_t col_count = 0;
   uint16_t threshold = channel[current].brightness.threshold_high;
 
   if (isSelected(line)) {
@@ -570,16 +620,16 @@ void mDyn_bright_high (uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].brightness.threshold_high = threshold;
   }
 
-  char buf[13];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "High    :%04d", threshold);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].brightness.threshold_high = threshold;
 }
 
 
@@ -619,7 +669,6 @@ void mDyn_move_invert (uint8_t line) {
 }
 
 void mDyn_move_wait (uint8_t line) {
-  static uint8_t col_count = 0;
   uint32_t duration = channel[current].movement.delay;
 
   if (isSelected(line)) {
@@ -634,14 +683,14 @@ void mDyn_move_wait (uint8_t line) {
       markDirty(true, true);
       LCDML.BT_resetDown();
     }
+    channel[current].movement.delay = duration;
   }
 
-  char buf[13];
+  char buf[LCDML_DISP_COLS];
   sprintf (buf, "Duration:%04d", duration);
 
   u8g2.drawStr( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 0,  (LCDML_DISP_FONT_H * (1 + line)), buf );
   if(isSelected(line)) {
-    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * (col_count + 9), (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
+    u8g2.drawFrame( LCDML_DISP_FRAME_OFFSET + LCDML_DISP_FONT_W * 9, (LCDML_DISP_FONT_H * (line)) + (LCDML_DISP_FONT_H / 4), (LCDML_DISP_FONT_W * 4), LCDML_DISP_FONT_H - 1);
   }
-  channel[current].movement.delay = duration;
 }

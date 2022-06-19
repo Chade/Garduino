@@ -10,6 +10,7 @@
 // *****************************************************************************
 
 #define BAUD_RATE                    115200
+#define READ_FROM_EEPROM
 
 // *****************************************************************************
 // Pins
@@ -22,7 +23,6 @@
 #define MISO                         50
 #define MOSI                         51
 #define SCK                          52
-#define SS                           53
 // SD-Card
 #define SD_CD_PIN                    3
 #define SD_CS_PIN                    53
@@ -32,7 +32,7 @@
 #define MOISTURE_PIN                 A0
 #define RAIN_PIN                     A1
 #define BRIGHTNESS_PIN               A2
-#define MOVEMENT_PIN                 53
+#define MOVEMENT_PIN                 48
 #define FLOW_PIN                     2
 #define PUMP_PIN                     10
 #define FAN_PIN                      11
@@ -66,6 +66,10 @@
 // *****************************************************************************
 
 #define FLOW_CONV                    600.0 // ticks per liter
+#define UTC2CET                         60 // Offset from winter time to UTC
+#define UTC2CEST                       120 // Offset from summer time to UTC
+#define LATITUDE                  49.07703 // position for sunrise/sunset calculation
+#define LONGITUDE                  9.19951 // position for sunrise/sunset calculation
 
 // *****************************************************************************
 // Display settings
@@ -163,6 +167,17 @@ public:
   time_t duration = 0;
   time_t repeat = 0;
 
+  uint8_t adjustSetpoint = 0;
+  signed_time_t adjustOffset = 0;
+
+  enum setpoint_enum {ENone = 0, ESunrise = 1, ENoon = 2, ESunset = 3};
+  
+  const char setpoint0[8] = "none";
+  const char setpoint1[8] = "sunrise";
+  const char setpoint2[8] = "noon";
+  const char setpoint3[8] = "sunset";
+  const char * const setpoint_names[4] = {setpoint0, setpoint1, setpoint2, setpoint3};
+
 public:
   void print(Stream &stream, const String &name) {
     stream.print(name);
@@ -174,6 +189,12 @@ public:
     stream.print(name);
     stream.print(F("Repeat = "));
     stream.println(fromTime(repeat));
+    stream.print(name);
+    stream.print(F("AdjustSetpoint = "));
+    stream.println(getAdjustSetpoint());
+    stream.print(name);
+    stream.print(F("AdjustOffset = "));
+    stream.println(fromSignedTime(adjustOffset));
   }
 
   bool preactive(const time_t& current_time, const time_t& in) {
@@ -234,6 +255,47 @@ public:
   time_t getRepeat()
   {
     return repeat;
+  }
+
+  void setAdjustSetpoint(const String& new_setpoint)
+  {
+    if (new_setpoint.equalsIgnoreCase(String(setpoint_names[ESunrise]))) {
+      adjustSetpoint = ESunrise;
+    }
+    else if (new_setpoint.equalsIgnoreCase(String(setpoint_names[ENoon]))) {
+      adjustSetpoint = ENoon;
+    }
+    else if (new_setpoint.equalsIgnoreCase(String(setpoint_names[ESunset]))) {
+      adjustSetpoint = ESunset;
+    }
+    else {
+      adjustSetpoint = ENone;
+    }
+  }
+
+  void setAdjustSetpoint(const uint8_t& new_setpoint)
+  {
+    adjustSetpoint = new_setpoint;
+  }
+
+  String getAdjustSetpoint()
+  {
+    return String(setpoint_names[adjustSetpoint]);
+  }
+
+  bool isAdjustEnabled()
+  {
+    return adjustSetpoint > 0;
+  }
+
+  void setAdjustOffset(const signed_time_t& new_offset)
+  {
+    adjustOffset = new_offset;
+  }
+
+  signed_time_t getAdjustOffset()
+  {
+    return adjustOffset;
   }
 };
 
@@ -424,6 +486,14 @@ public:
     stream.print(F("<repeat>"));
     stream.print(time.getRepeat());
     stream.println(F("</repeat>"));
+
+    stream.print(F("<setpoint>"));
+    stream.print(time.getAdjustSetpoint());
+    stream.println(F("</setpoint>"));
+
+    stream.print(F("<offset>"));
+    stream.print(time.getAdjustOffset());
+    stream.println(F("</offset>"));
     
     stream.println(F("</channel>"));
 
