@@ -112,6 +112,9 @@ bool parseConfig(const byte& idx) {
     value = configFile.getValue(F("SignalPin"), header);
     channel[idx].signal = value.toInt();
 
+    value = configFile.getValue(F("AuxPin"), header);
+    channel[idx].aux = toBool(value);
+
     value = configFile.getValue(F("TimeStart"), header);
     channel[idx].time.start_time = toSeconds(value);
 
@@ -246,8 +249,8 @@ void setupIOs() {
     }
   }
   
-  pinMode(PUMP_PIN, OUTPUT);
-  digitalWrite(PUMP_PIN, HIGH);
+  pinMode(AUX_PIN, OUTPUT);
+  digitalWrite(AUX_PIN, HIGH);
 
   pinMode(FAN_PIN, OUTPUT);
   digitalWrite(FAN_PIN, HIGH);
@@ -267,7 +270,7 @@ void setupIOs() {
   Serial.println(F("Done"));
 }
 
-void readSensor() {
+void readEnvSensor() {
   unsigned long current_time = millis();
   static unsigned long last_time = 0;
 
@@ -296,6 +299,15 @@ void readSensor() {
     }
     last_time = current_time;
   }
+}
+
+void printRequest(const String& key, const String& value, byte channelIdx, Stream& streamOut = Serial) {
+  streamOut.print("[ESP8266 ] [Channel");
+  streamOut.print(channelIdx);
+  streamOut.print("] ");
+  streamOut.print(key);
+  streamOut.print(" = ");
+  streamOut.println(value);
 }
 
 bool readRequest (Stream& stream, String& request) {
@@ -341,58 +353,51 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
 
           if (key == F("enabled")) {
             channel[channelIdx].enable(toBool(value));
-            streamOut.print("[ESP8266]  Enable Channel");
-            streamOut.println(channelIdx);
+            printRequest("Enable", value, channelIdx, streamOut);
           }
           else if (key == F("skip")) {
             channel[channelIdx].doSkip(toBool(value));
-            streamOut.print("[ESP8266]  Skip Channel");
-            streamOut.println(channelIdx);
+            printRequest("Skip", value, channelIdx, streamOut);
           }
           else if (key == F("state")) {
             bool requestActive = toBool(value);
-              if(!channel[channelIdx].active && requestActive) {
-                streamOut.print("[ESP8266]  Activate Channel");
-                channel[channelIdx].enabled = false;
-                channel[channelIdx].active = true;
-                channel[channelIdx].skip = false;
+            printRequest("Activate", value, channelIdx, streamOut);
+            if(!channel[channelIdx].active && requestActive) {
+              printRequest("State", "Activated", channelIdx, streamOut);
+              channel[channelIdx].enabled = false;
+              channel[channelIdx].active = true;
+              channel[channelIdx].skip = false;
+            }
+            else if(channel[channelIdx].active && !requestActive) {
+              printRequest("State", "Deactivated", channelIdx, streamOut);
+              channel[channelIdx].active = false;
+              if (channel[channelIdx].enabled) {
+                channel[channelIdx].skip = true;
               }
-              else if(channel[channelIdx].active && !requestActive) {
-                streamOut.print("[ESP8266]  Deactivate Channel");
-                channel[channelIdx].active = false;
-                if (channel[channelIdx].enabled) {
-                  channel[channelIdx].skip = true;
-                }
-                else {
-                  channel[channelIdx].enabled = true;
-                }
+              else {
+                channel[channelIdx].enabled = true;
               }
-              streamOut.println(channelIdx);
+            }
           }
           else if (key == F("time")) {
             channel[channelIdx].time.setStartTime(toTime(value));
-            streamOut.print("[ESP8266]  Set StartTime Channel");
-            streamOut.println(channelIdx);
+            printRequest("StartTime", value, channelIdx, streamOut);
           }
           else if (key == F("duration")) {
             channel[channelIdx].time.setDuration(toSeconds(value));
-            streamOut.print("[ESP8266]  Set Duration Channel");
-            streamOut.println(channelIdx);
+            printRequest("Duration", value, channelIdx, streamOut);
           }
           else if (key == F("repeat")) {
             channel[channelIdx].time.setRepeat(toSeconds(value));
-            streamOut.print("[ESP8266]  Set Repeat Channel");
-            streamOut.println(channelIdx);
+            printRequest("Repeat", value, channelIdx, streamOut);
           }
           else if (key == F("setpoint")) {
             channel[channelIdx].time.setAdjustSetpoint(value);
-            streamOut.print("[ESP8266]  Set AdjustSetpoint Channel");
-            streamOut.println(channelIdx);
+            printRequest("AdjustSetpoint", value, channelIdx, streamOut);
           }
           else if (key == F("offset")) {
             channel[channelIdx].time.setAdjustOffset(toSignedSeconds(value));
-            streamOut.print("[ESP8266]  Set AdjustOffset Channel");
-            streamOut.println(channelIdx);
+            printRequest("AdjustOffset", value, channelIdx, streamOut);
           }
           startIdx = endIdx;
         } while (endIdx < request.length());
@@ -405,7 +410,7 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
       }
     }
     else {
-      streamOut.println("[ESP8266]  " + request);
+      streamOut.println("[ESP8266 ] " + request);
     }
   }
 }
@@ -498,7 +503,9 @@ void loop() {
   
   for (byte i = 0; i < NUM_CHANNEL; i++) {
     if (channel[i].enabled) {
-      // Check if we have to adjust start time if adjustment based on sunrise/sunset is enabled
+      // ====================================================================================================
+      // Adjust start time if adjustment based on sunrise/sunset is enabled
+      // ====================================================================================================
       if(channel[i].time.isAdjustEnabled() ) {
         time_t sunrise_localtime_unix, sunset_localtime_unix;
         time_t localtime_unix = timezone.toLocal(now(), &tcr);
@@ -523,7 +530,9 @@ void loop() {
         }
       }
       
-      // Check timer
+      // ====================================================================================================
+      // Check timer and sensors to de-/activate channel
+      // ====================================================================================================
       channel[i].active = channel[i].time.active(timezone.toLocal(now()));
 
       if (channel[i].active != channel[i].was_active) {
@@ -590,7 +599,9 @@ void loop() {
       }
     }
 
+    // ====================================================================================================
     // Update buttons
+    // ====================================================================================================
     if (channel[i].input != 0) {
       if (digitalRead(channel[i].input) == HIGH && bitRead(button_prev, i) == LOW) { // Rising edge = button pressed
         bitWrite(button_prev, i, HIGH);
@@ -620,10 +631,15 @@ void loop() {
     }
   }
 
+  // ====================================================================================================
   // Handle request from webserver
+  // ====================================================================================================
   handleRequest(Serial3);
 
-  // Set outputs
+  // ====================================================================================================
+  // Set outputs and signals
+  // ====================================================================================================
+  bool auxiliaryPin = false;
   for (byte i = 0; i < NUM_CHANNEL; i++) {
     // Update signals
     if (channel[i].signal != 0) {
@@ -656,22 +672,21 @@ void loop() {
 
     // Set digital output
     digitalWrite(channel[i].output, !(channel[i].active && !channel[i].skip));
+
+    // Assemble state for auxiliary pin over all channels
+    auxiliaryPin |= channel[i].active && !channel[i].skip && channel[i].aux;
   }
 
-  // Activate pump
-  if ((channel[0].active && !channel[0].skip) ||
-      (channel[1].active && !channel[1].skip) ||
-      (channel[2].active && !channel[2].skip) ||
-      (channel[3].active && !channel[3].skip)) {
-    digitalWrite(PUMP_PIN, LOW);
-  }
-  else {
-    digitalWrite(PUMP_PIN, HIGH);
-  }
+  // If at least one channel needs the auxiliary pin, it will be set
+  digitalWrite(AUX_PIN, !auxiliaryPin);  // Needs to be inverted due to relay logic
 
-  // Read temperature sensor
-  readSensor();
+  // ====================================================================================================
+  // Read environment sensor
+  // ====================================================================================================
+  readEnvSensor();
 
+  // ====================================================================================================
   // Update display
+  // ====================================================================================================
   updateMenu();
 }

@@ -1,0 +1,234 @@
+################################################################################
+
+[Channel0]
+Enabled = false
+OutputPin = 4
+InputPin = 26
+SignalPin = 30
+AuxPin = true
+
+TimeStart = 21:00:00
+TimeDuration = 00:15:00
+TimeRepeat = 00:00:00
+TimeAdjustSetpoint = none
+TimeAdjustOffset = 00:00:00
+
+FlowCount = 0
+
+MovementEnabled = false
+MovementInvert = false
+MovementPin = 42
+
+MoistureEnabled = false
+MoistureInvert = false
+MoisturePin = 54
+MoistureThresholdLow = 0
+MoistureThresholdHigh = 1024
+
+RainEnabled = false
+RainInvert = false
+RainPin = 55
+RainThresholdLow = 0
+RainThresholdHigh = 1024
+
+BrightnessEnabled = false
+BrightnessInvert = false
+BrightnessPin = 56
+BrightnessThresholdLow = 0
+BrightnessThresholdHigh = 1024
+
+################################################################################
+
+[Channel1]
+Enabled = false
+OutputPin = 5
+InputPin = 27
+SignalPin = 31
+AuxPin = true
+
+TimeStart = 21:15:00
+TimeDuration = 00:10:00
+TimeRepeat = 00:00:00
+TimeAdjustSetpoint = none
+TimeAdjustOffset = 00:00:00
+
+FlowCount = 0
+
+MovementEnabled = false
+MovementInvert = false
+MovementPin = 42
+
+MoistureEnabled = false
+MoistureInvert = false
+MoisturePin = 54
+MoistureThresholdLow = 0
+MoistureThresholdHigh = 1024
+
+RainEnabled = false
+RainInvert = false
+RainPin = 55
+RainThresholdLow = 0
+RainThresholdHigh = 1024
+
+BrightnessEnabled = false
+BrightnessInvert = false
+BrightnessPin = 56
+BrightnessThresholdLow = 0
+BrightnessThresholdHigh = 1024
+
+################################################################################
+
+[Channel2]
+Enabled = false
+OutputPin = 6
+InputPin = 28
+SignalPin = 32
+AuxPin = true
+
+TimeStart = 21:25:00
+TimeDuration = 00:15:00
+TimeRepeat = 00:00:00
+TimeAdjustSetpoint = none
+TimeAdjustOffset = 00:00:00
+
+FlowCount = 0
+
+MovementEnabled = false
+MovementInvert = false
+MovementPin = 42
+
+MoistureEnabled = false
+MoistureInvert = false
+MoisturePin = 54
+MoistureThresholdLow = 0
+MoistureThresholdHigh = 1024
+
+RainEnabled = false
+RainInvert = false
+RainPin = 55
+RainThresholdLow = 0
+RainThresholdHigh = 1024
+
+BrightnessEnabled = false
+BrightnessInvert = false
+BrightnessPin = 56
+BrightnessThresholdLow = 0
+BrightnessThresholdHigh = 1024
+
+################################################################################
+
+[Channel3]
+Enabled = false
+OutputPin = 7
+InputPin = 29
+SignalPin = 33
+AuxPin = true
+
+TimeStart = 21:40:00
+TimeDuration = 00:05:00
+TimeRepeat = 00:00:00
+TimeAdjustSetpoint = none
+TimeAdjustOffset = 00:00:00
+
+FlowCount = 0
+
+MovementEnabled = false
+MovementInvert = false
+MovementPin = 42
+
+MoistureEnabled = false
+MoistureInvert = false
+MoisturePin = 54
+MoistureThresholdLow = 0
+MoistureThresholdHigh = 1024
+
+RainEnabled = false
+RainInvert = false
+RainPin = 55
+RainThresholdLow = 0
+RainThresholdHigh = 1024
+
+BrightnessEnabled = false
+BrightnessInvert = false
+BrightnessPin = 56
+BrightnessThresholdLow = 0
+BrightnessThresholdHigh = 1024
+
+################################################################################
+
+[Channel4]
+Enabled = true
+OutputPin = 8
+InputPin = 0
+SignalPin = 0
+AuxPin = false
+
+TimeStart = 21:00:40
+TimeDuration = 03:00:00
+TimeRepeat = 00:00:00
+TimeAdjustSetpoint = sunset
+TimeAdjustOffset = -00:30:00
+
+FlowCount = 0
+
+MovementEnabled = false
+MovementInvert = false
+MovementPin = 42
+
+MoistureEnabled = false
+MoistureInvert = false
+MoisturePin = 54
+MoistureThresholdLow = 0
+MoistureThresholdHigh = 1024
+
+RainEnabled = false
+RainInvert = false
+RainPin = 55
+RainThresholdLow = 0
+RainThresholdHigh = 1024
+
+BrightnessEnabled = false
+BrightnessInvert = false
+BrightnessPin = 56
+BrightnessThresholdLow = 0
+BrightnessThresholdHigh = 1024
+
+################################################################################
+
+[Channel5]
+Enabled = false
+OutputPin = 9
+InputPin = 0
+SignalPin = 0
+AuxPin = false
+
+TimeStart = 21:45:00
+TimeDuration = 00:15:00
+TimeRepeat = 00:00:00
+TimeAdjustSetpoint = none
+TimeAdjustOffset = 00:00:00
+
+FlowCount = 0
+
+MovementEnabled = false
+MovementInvert = false
+MovementPin = 42
+
+MoistureEnabled = false
+MoistureInvert = false
+MoisturePin = 54
+MoistureThresholdLow = 0
+MoistureThresholdHigh = 1024
+
+RainEnabled = false
+RainInvert = false
+RainPin = 55
+RainThresholdLow = 0
+RainThresholdHigh = 1024
+
+BrightnessEnabled = false
+BrightnessInvert = false
+BrightnessPin = 56
+BrightnessThresholdLow = 0
+BrightnessThresholdHigh = 1024
+

@@ -34,7 +34,7 @@
 #define BRIGHTNESS_PIN               A2
 #define MOVEMENT_PIN                 48
 #define FLOW_PIN                     2
-#define PUMP_PIN                     10
+#define AUX_PIN                      10
 #define FAN_PIN                      11
 // Encoder
 #define ENCODER_A_PIN                19    // physical pin has to be 2 or 3 to use interrupts (on mega e.g. 20 or 21), use internal pullups
@@ -365,6 +365,7 @@ public:
   bool active = false;
   bool was_active = false;
   bool skip = false;
+  bool aux = false;
   byte output = 0;
   byte input = 0;
   byte signal = 0;
@@ -421,6 +422,8 @@ public:
     stream.println(input);
     stream.print(F("SignalPin = "));
     stream.println(signal);
+    stream.print(F("AuxPin = "));
+    stream.println(fromBool(aux));
     stream.println();
 
     time.print(stream, F("Time"));
