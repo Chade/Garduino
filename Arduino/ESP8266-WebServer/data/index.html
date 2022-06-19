@@ -25,11 +25,17 @@
           var responseTime     = responseChannel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
           var responseDuration = responseChannel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
           var responseRepeat   = responseChannel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue;
+          var responseSetpoint = responseChannel[i].getElementsByTagName("setpoint")[0].childNodes[0].nodeValue;
+          var responseOffset   = responseChannel[i].getElementsByTagName("offset")[0].childNodes[0].nodeValue;
+
 
           document.getElementById("time" + idx).value = responseTime;
           document.getElementById("duration" + idx).value = responseDuration;
           document.getElementById("repeat" + idx).value = responseRepeat;
-
+          document.getElementById("offset" + idx).value = responseOffset;
+          
+          document.getElementById("setpoint" + idx).options[responseOffset].selected = true;
+          
           if (responseEnabled = "true") {
             document.getElementById("enabled" + idx).checked = true;
           }
@@ -39,21 +45,21 @@
 
           if (responseState = "skip") {
             document.getElementById("state" + idx).checked = false;
-	    document.getElementById("skip"  + idx).checked = true;
+            document.getElementById("skip"  + idx).checked = true;
           }
-	  else if (responseState = "active") {
-	    document.getElementById("state" + idx).checked = true;
-	    document.getElementById("skip"  + idx).checked = false;
-	  }
+          else if (responseState = "active") {
+            document.getElementById("state" + idx).checked = true;
+            document.getElementById("skip"  + idx).checked = false;
+          }
           else {
             document.getElementById("state" + idx).checked = false;
-	    document.getElementById("skip"  + idx).checked = false;
+            document.getElementById("skip"  + idx).checked = false;
           }
         }
       }
 
       function EventButtonClicked(element, element_idx) {
-        var name = element.name;
+        var name    = element.name;
         var checked = element.checked;
 
         var request = new XMLHttpRequest();
@@ -63,13 +69,29 @@
           }
         }
 
-        var requestString = "channel.xml?channel=" + element_idx + "&" + element.name + "=" + checked;
+        var requestString = "channel.xml?channel=" + element_idx + "&" + name + "=" + checked;
         request.open("GET", requestString, true);
         request.send(null);
       };
 
       function EventNumberChanged(element, element_idx) {
-        var name = element.name;
+        var name  = element.name;
+        var value = element.value;
+
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            ParseChangeXML(this);
+          }
+        }
+
+        var requestString = "channel.xml?channel=" + element_idx + "&" + name + "=" + value;
+        request.open("GET", requestString, true);
+        request.send(null);
+      };
+
+      function EventComboChanged(element, element_idx) {
+        var name  = element.name;
         var value = element.value;
 
         var request = new XMLHttpRequest();
@@ -85,7 +107,7 @@
       };
 
       function ParseXML(xml) {
-        var table="<tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>Skip</th></tr>";
+        var table="<tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr>";
 
         var channel = xml.responseXML.getElementsByTagName("channel");
 
@@ -96,6 +118,8 @@
           var requestStartTime = channel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
           var requestDuration = channel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
           var requestRepeat = channel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue;
+          var requestSetpoint = channel[i].getElementsByTagName("setpoint")[0].childNodes[0].nodeValue;
+          var requestOffset = channel[i].getElementsByTagName("offset")[0].childNodes[0].nodeValue;
 
           var buttonEnabled = "<label class=\"switch\"><input id=\"enabled" + idx + "\" name=\"enabled\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
           if (requestEnabled == "true") {
@@ -115,11 +139,38 @@
           }
           buttonSkip += "><span class=\"slider round\"></span></label>"
 
-          var editTime     = "<input id=\"time"     + idx + "\" name=\"time\"     type=\"time\"   value=\"" + requestStartTime + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-          var editDuration = "<input id=\"duration" + idx + "\" name=\"duration\" type=\"number\" value=\"" + requestDuration  + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-          var editRepeat   = "<input id=\"repeat"   + idx + "\" name=\"repeat\"   type=\"number\" value=\"" + requestRepeat    + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
+          var optionNone = "<option value=\"none\" "
+          if (requestSetpoint == "none") {
+            optionNone += "selected"
+          }
+          optionNone += ">None</option>"
 
-          table += "<tr><td>" + idx + "</td><td>" + buttonEnabled + "</td><td>" + buttonState + "</td><td>" + editTime + "</td><td>" +  editDuration + "</td><td>" + editRepeat + "</td><td>" + buttonSkip + "</td></tr>";
+          var optionSunrise = "<option value=\"sunrise\" "
+          if (requestSetpoint == "sunrise") {
+            optionSunrise += "selected"
+          }
+          optionSunrise += ">Sunrise</option>"
+
+          var optionNoon = "<option value=\"noon\" "
+          if (requestSetpoint == "noon") {
+            optionNoon += "selected"
+          }
+          optionNoon += ">Noon</option>"
+
+          var optionSunset = "<option value=\"sunset\" "
+          if (requestSetpoint == "sunset") {
+            optionSunset += "selected"
+          }
+          optionSunset += ">Sunset</option>"
+
+          var comboSetpoint = "<select id=\"setpoint" + idx + "\" name=\"setpoint\" onchange=\"EventComboChanged(this, " + idx + ")\">" + optionNone + optionSunrise + optionNoon + optionSunset + "</select>";
+
+          var editTime      = "<input id=\"time"      + idx + "\" name=\"time\"     type=\"time\"   value=\"" + requestStartTime + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
+          var editDuration  = "<input id=\"duration"  + idx + "\" name=\"duration\" type=\"number\" value=\"" + requestDuration  + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
+          var editRepeat    = "<input id=\"repeat"    + idx + "\" name=\"repeat\"   type=\"number\" value=\"" + requestRepeat    + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
+          var editOffset    = "<input id=\"offset"    + idx + "\" name=\"offset\"   type=\"number\" value=\"" + requestOffset    + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
+
+          table += "<tr><td>" + idx + "</td><td>" + buttonEnabled + "</td><td>" + buttonState + "</td><td>" + editTime + "</td><td>" +  editDuration + "</td><td>" + editRepeat + "</td><td>" + comboSetpoint + "</td><td>" + editOffset + "</td><td>" + buttonSkip + "</td></tr>";
         }
         document.getElementById("channels").innerHTML = table;
       };
