@@ -329,13 +329,19 @@ bool readRequest (Stream& stream, String& request) {
 
 void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
   String request;
+  int index;
   if (readRequest(streamIn, request)) {
-    int index = request.indexOf("channel.xml");
-    if (index >= 0) {
-      index = request.indexOf('?', index+11);
-      if (index >= 0) {
+    // =========================================================================
+    // Handle "channel.xml" requests
+    // =========================================================================
+    if ((index  = request.indexOf(F("channel.xml"))) >= 0) {
+      streamOut.println("[ESP8266 ] Responding to xml request" + request);
+      // It's a channel.xml request
+      // Now we check, if the request contains specific data
+      if ((index = request.indexOf('?', index+11)) >= 0) {
+        // We now extract the channel index and key value pairs
         // Read channel number
-        int channelIdxStart = request.indexOf("channel=", index+1) + 8;
+        int channelIdxStart = request.indexOf(F("channel="), index+1) + 8;
         byte channelIdx = request.substring(channelIdxStart).toInt();
 
         int startIdx = index;
@@ -384,11 +390,11 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
             printRequest("StartTime", value, channelIdx, streamOut);
           }
           else if (key == F("duration")) {
-            channel[channelIdx].time.setDuration(toSeconds(value));
+            channel[channelIdx].time.setDuration(toSeconds(value) * 60);
             printRequest("Duration", value, channelIdx, streamOut);
           }
           else if (key == F("repeat")) {
-            channel[channelIdx].time.setRepeat(toSeconds(value));
+            channel[channelIdx].time.setRepeat(toSeconds(value) * 60);
             printRequest("Repeat", value, channelIdx, streamOut);
           }
           else if (key == F("setpoint")) {
@@ -396,20 +402,60 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
             printRequest("AdjustSetpoint", value, channelIdx, streamOut);
           }
           else if (key == F("offset")) {
-            channel[channelIdx].time.setAdjustOffset(toSignedSeconds(value));
+            channel[channelIdx].time.setAdjustOffset(toSignedSeconds(value) * 60);
             printRequest("AdjustOffset", value, channelIdx, streamOut);
           }
           startIdx = endIdx;
         } while (endIdx < request.length());
 
-        // Send response xml
+        // Send response xml for modified channel
         channel[channelIdx].printXML(streamIn, String(channelIdx));
+        channel[channelIdx].printXML(streamOut, String(channelIdx));
       }
       else {
+        // Send entire xml
         channelToXML(streamIn);
+        channelToXML(streamOut);
       }
     }
+    // =========================================================================
+    // Handle "config" requests
+    // =========================================================================
+    else if ((index = request.indexOf(F("config"))) >= 0) {
+      if ((index = request.indexOf('?', index+6)) >= 0) {
+        int actionIdxStart = request.indexOf(F("action="), index+1) + 7;
+        int actionIdxEnd   = request.length();
+
+        String value   = request.substring(actionIdxStart, actionIdxEnd);
+        if (value == F("save")) {
+          streamOut.println("[ESP8266 ] Request saving config");
+          
+          streamIn.println(F("<?xml version = \"1.0\" ?>"));
+          streamIn.print(F("<status>"));
+          streamIn.print(F("OK"));
+          streamIn.println(F("</status>"));
+          streamIn.println('\n');
+        }
+        else if (value == F("load")) {
+          streamOut.println("[ESP8266 ] Request loading config");
+          
+          streamIn.println(F("<?xml version = \"1.0\" ?>"));
+          streamIn.print(F("<status>"));
+          streamIn.print(F("OK"));
+          streamIn.println(F("</status>"));
+          streamIn.println('\n');
+        }
+        else {
+          streamOut.println("[ESP8266 ] Request unknown action " + value);
+        }
+      }
+    }
+    // =========================================================================
+    // Relay output of ESP8266
+    // =========================================================================
     else {
+      // Request probybly contains only ESP8266 outputs
+      // Relay output from ESP8266
       streamOut.println("[ESP8266 ] " + request);
     }
   }
@@ -526,7 +572,7 @@ void loop() {
           channel[i].time.start_time = channel[i].time.adjustOffset + elapsedSecsToday(sunset_localtime_unix);
         }
         else if(channel[i].time.adjustSetpoint == Timer::ENoon) {
-          channel[i].time.start_time = channel[i].time.adjustOffset + (elapsedSecsToday(sunset_localtime_unix) - elapsedSecsToday(sunrise_localtime_unix)) / 2.0;
+          channel[i].time.start_time = channel[i].time.adjustOffset + (elapsedSecsToday(sunrise_localtime_unix) + elapsedSecsToday(sunset_localtime_unix)) / 2.0;
         }
       }
       

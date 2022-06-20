@@ -106,6 +106,19 @@
         request.send(null);
       };
 
+      function EventConfig(element) {
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            // We could do something once the request was completed
+          }
+        }
+
+        var requestString = "config?action=" + element.id;
+        request.open("GET", requestString, true);
+        request.send(null);
+      };
+
       function ParseXML(xml) {
         var table="<tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr>";
 
@@ -220,20 +233,6 @@
         border: none;
         padding: 16px;
       }
-      .button {
-        display: inline-block;
-        background-color: #0043af;
-        border: none;
-        border-radius: 4px;
-        color: white;
-        padding: 16px 40px;
-        text-decoration: none;
-        margin: 2px;
-        cursor: pointer;
-      }
-      .button_active {
-        background-color: #f44336;
-      }
       .switch {
         position: relative;
         display: inline-block;
@@ -284,12 +283,36 @@
       .slider.round:before {
         border-radius: 50%;
       }
+      .button {
+        border: none;
+        color: white;
+        padding: 16px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        transition-duration: 0.2s;
+        cursor: pointer;
+        background-color: white; 
+        color: black; 
+        border: 2px solid #2196F3;
+      }
+      .button:hover {
+        background-color: #2196F3;
+        color: white;
+      }
+
+</style>
+</head>
     </style>
   </head>
   <body>
       <h1>Garduino</h1>
       <h3>Last update: <span id="currentTime"></span></h3>
-      <table id="channels"><tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>Skip</th></tr></table>
+      <button class="button" id="save" name="buttonSave" onclick="EventConfig(this)">Save Config to EEPROM</button>
+      <button class="button" id="load" name="buttonLoad" onclick="EventConfig(this)">Load Config from EEPROM</button>
+      <table id="channels"><tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr>";
       <br><br>
   </body>
 </html>

@@ -479,11 +479,13 @@ public:
     stream.println(F("</time>"));
     
     stream.print(F("<duration>"));
-    stream.print(time.getDuration());
+    time_t duration = time.duration / 60;
+    stream.print(duration);
     stream.println(F("</duration>"));
     
     stream.print(F("<repeat>"));
-    stream.print(time.getRepeat());
+    time_t repeat = time.repeat / 60;
+    stream.print(repeat);
     stream.println(F("</repeat>"));
 
     stream.print(F("<setpoint>"));
@@ -491,7 +493,8 @@ public:
     stream.println(F("</setpoint>"));
 
     stream.print(F("<offset>"));
-    stream.print(time.getAdjustOffset());
+    signed_time_t offset = time.adjustOffset / 60;
+    stream.print(offset);
     stream.println(F("</offset>"));
     
     stream.println(F("</channel>"));
