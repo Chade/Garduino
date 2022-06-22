@@ -57,7 +57,7 @@ DS3232RTC RTC;
 
 TimeChangeRule *tcr;
 TimeChangeRule timeSommer = {"CEST", Last, Sun, Mar, 2, UTC2CEST};    // Daylight saving time = UTC +2 hours
-TimeChangeRule timeWinter = {"CET",  Last, Sun, Oct, 3,  UTC2CET};    //        Standard time = UTC +1 hours
+TimeChangeRule timeWinter = {"CET",  Last, Sun, Oct, 3,  UTC2CET};    // Standard time = UTC +1 hours
 Timezone timezone(timeSommer, timeWinter);
 
 // Channel storage
@@ -335,7 +335,8 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
     // Handle "channel.xml" requests
     // =========================================================================
     if ((index  = request.indexOf(F("channel.xml"))) >= 0) {
-      streamOut.println("[ESP8266 ] Responding to xml request" + request);
+      streamOut.println("[ESP8266 ] Responding to xml request " + request);
+      
       // It's a channel.xml request
       // Now we check, if the request contains specific data
       if ((index = request.indexOf('?', index+11)) >= 0) {
@@ -355,7 +356,10 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
           }
 
           String key   = request.substring(startIdx+1, sepIdx);
+          key.trim();
+          
           String value = request.substring(sepIdx+1, endIdx);
+          value.trim();
 
           if (key == F("enabled")) {
             channel[channelIdx].enable(toBool(value));
@@ -410,7 +414,7 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
 
         // Send response xml for modified channel
         channel[channelIdx].printXML(streamIn, String(channelIdx));
-        channel[channelIdx].printXML(streamOut, String(channelIdx));
+        //channel[channelIdx].printXML(streamOut, String(channelIdx));
       }
       else {
         // Send entire xml
@@ -421,14 +425,23 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
     // =========================================================================
     // Handle "config" requests
     // =========================================================================
-    else if ((index = request.indexOf(F("config"))) >= 0) {
-      if ((index = request.indexOf('?', index+6)) >= 0) {
+    else if ((index = request.indexOf(F("config.xml"))) >= 0) {
+      streamOut.println("[ESP8266 ] Responding to xml request " + request);
+      if ((index = request.indexOf('?', index+10)) >= 0) {
+        streamOut.println("[ESP8266 ] Responding to xml request " + request);
+        
         int actionIdxStart = request.indexOf(F("action="), index+1) + 7;
         int actionIdxEnd   = request.length();
 
-        String value   = request.substring(actionIdxStart, actionIdxEnd);
+        String value = request.substring(actionIdxStart, actionIdxEnd);
+        value.trim();
+        
         if (value == F("save")) {
           streamOut.println("[ESP8266 ] Request saving config");
+
+          for (byte i = 0; i < NUM_CHANNEL; i++) {
+            EEPROM.put(i * sizeof(Channel), channel[i]);
+          }
           
           streamIn.println(F("<?xml version = \"1.0\" ?>"));
           streamIn.print(F("<status>"));
@@ -438,6 +451,10 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
         }
         else if (value == F("load")) {
           streamOut.println("[ESP8266 ] Request loading config");
+
+          for (byte i = 0; i < NUM_CHANNEL; i++) {
+            EEPROM.get(i * sizeof(Channel), channel[i]);
+          }
           
           streamIn.println(F("<?xml version = \"1.0\" ?>"));
           streamIn.print(F("<status>"));

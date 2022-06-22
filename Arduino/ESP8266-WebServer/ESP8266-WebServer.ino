@@ -125,6 +125,7 @@ void setup() {
 
   server.on("/", HTTP_GET, handleRoot);
   server.on("/channel.xml", HTTP_GET, handleXML);
+  server.on("/config.xml",  HTTP_GET, handleXML);
 
   // Start web server
   server.begin();

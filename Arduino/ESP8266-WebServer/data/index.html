@@ -5,49 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="data:,">
     <script>
-      function DisplayCurrentTime(field) {
+      function DisplayCurrentTime() {
           var date = new Date();
-          var hours = date.getHours() < 10 ? "0" + date.getHours() : date.getHours();
+          var hours   = date.getHours()   < 10 ? "0" + date.getHours()   : date.getHours();
           var minutes = date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes();
           var seconds = date.getSeconds() < 10 ? "0" + date.getSeconds() : date.getSeconds();
           time = hours + ":" + minutes + ":" + seconds;
-          document.getElementById(field).innerHTML = time;
+          document.getElementById("currentTime").innerHTML = time;
       };
 
-      function ParseChangeXML(xml) {
+      function EventButtonClicked(element, element_idx) {
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            ParseXML(this);
+            DisplayCurrentTime();
+          }
+        }
+
+        var requestString = "channel.xml?channel=" + element_idx + "&" + element.name + "=" + element.checked;
+        request.open("GET", requestString, true);
+        request.send(null);
+      };
+
+      function EventElementChanged(element, element_idx) {
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            ParseXML(this);
+            DisplayCurrentTime();
+          }
+        }
+
+        var requestString = "channel.xml?channel=" + element_idx + "&" + element.name + "=" + element.value;
+        request.open("GET", requestString, true);
+        request.send(null);
+      };
+
+      function EventConfig(element) {
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            DisplayCurrentTime();
+          }
+        }
+
+        var requestString = "config.xml?action=" + element.id;
+        request.open("GET", requestString, true);
+        request.send(null);
+      };
+
+      function DrawTable(num_channel) {
+        var table = "<tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr>";
+        
+        for (var i = 0; i < num_channel; i++) {
+          var buttonEnabled = "<label class=\"switch\"><input id=\"enabled" + i + "\" name=\"enabled\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + i + ")\"><span class=\"slider round\"></span></label>"
+          var buttonState   = "<label class=\"switch\"><input id=\"state"   + i + "\" name=\"state\"   type=\"checkbox\" onclick=\"EventButtonClicked(this, " + i + ")\"><span class=\"slider round\"></span></label>"
+          var buttonSkip    = "<label class=\"switch\"><input id=\"skip"    + i + "\" name=\"skip\"    type=\"checkbox\" onclick=\"EventButtonClicked(this, " + i + ")\"><span class=\"slider round\"></span></label>"
+
+          var optionNone    = "<option value=\"none\">None</option>"
+          var optionSunrise = "<option value=\"sunrise\">Sunrise</option>"
+          var optionNoon    = "<option value=\"noon\">Noon</option>"
+          var optionSunset  = "<option value=\"sunset\">Sunset</option>"
+
+          var comboSetpoint = "<select id=\"setpoint" + i + "\" name=\"setpoint\"                 onchange=\"EventElementChanged(this, " + i + ")\">" + optionNone + optionSunrise + optionNoon + optionSunset + "</select>";
+          var editTime      = "<input id=\"time"      + i + "\" name=\"time\"     type=\"time\"   onchange=\"EventElementChanged(this, " + i + ")\">";
+          var editDuration  = "<input id=\"duration"  + i + "\" name=\"duration\" type=\"number\" onchange=\"EventElementChanged(this, " + i + ")\">";
+          var editRepeat    = "<input id=\"repeat"    + i + "\" name=\"repeat\"   type=\"number\" onchange=\"EventElementChanged(this, " + i + ")\">";
+          var editOffset    = "<input id=\"offset"    + i + "\" name=\"offset\"   type=\"number\" onchange=\"EventElementChanged(this, " + i + ")\">";
+          
+          table += "<tr><td>" + i + "</td><td>" + buttonEnabled + "</td><td>" + buttonState + "</td><td>" + editTime + "</td><td>" +  editDuration + "</td><td>" + editRepeat + "</td><td>" + comboSetpoint + "</td><td>" + editOffset + "</td><td>" + buttonSkip + "</td></tr>";
+        }
+        document.getElementById("channels").innerHTML = table;
+      };
+
+      function ParseXML(xml) {
         var responseChannel = xml.responseXML.getElementsByTagName("channel");
 
-        for (var i = 0; i <responseChannel.length; i++) {
+        for (var i = 0; i < responseChannel.length; i++) {
           var idx = responseChannel[i].getAttribute('id');
 
           var responseEnabled  = responseChannel[i].getElementsByTagName("enabled")[0].childNodes[0].nodeValue;
-          var responseState    = responseChannel[i].getElementsByTagName("skip")[0].childNodes[0].nodeValue;
+          var responseState    = responseChannel[i].getElementsByTagName("state")[0].childNodes[0].nodeValue;
           var responseTime     = responseChannel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
           var responseDuration = responseChannel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
           var responseRepeat   = responseChannel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue;
-          var responseSetpoint = responseChannel[i].getElementsByTagName("setpoint")[0].childNodes[0].nodeValue;
           var responseOffset   = responseChannel[i].getElementsByTagName("offset")[0].childNodes[0].nodeValue;
+          var responseSetpoint = responseChannel[i].getElementsByTagName("setpoint")[0].childNodes[0].nodeValue;
 
 
-          document.getElementById("time" + idx).value = responseTime;
+          document.getElementById("time"     + idx).value = responseTime;
           document.getElementById("duration" + idx).value = responseDuration;
-          document.getElementById("repeat" + idx).value = responseRepeat;
-          document.getElementById("offset" + idx).value = responseOffset;
+          document.getElementById("repeat"   + idx).value = responseRepeat;
+          document.getElementById("offset"   + idx).value = responseOffset;
+          document.getElementById("setpoint" + idx).value = responseSetpoint;
+      
           
-          document.getElementById("setpoint" + idx).options[responseOffset].selected = true;
-          
-          if (responseEnabled = "true") {
+          if (responseEnabled == "true") {
             document.getElementById("enabled" + idx).checked = true;
           }
-          else if (responseEnabled = "false"){
+          else if (responseEnabled == "false"){
             document.getElementById("enabled" + idx).checked = false;
           }
 
-          if (responseState = "skip") {
+          if (responseState == "skip") {
             document.getElementById("state" + idx).checked = false;
             document.getElementById("skip"  + idx).checked = true;
           }
-          else if (responseState = "active") {
+          else if (responseState == "active") {
             document.getElementById("state" + idx).checked = true;
             document.getElementById("skip"  + idx).checked = false;
           }
@@ -58,152 +123,23 @@
         }
       }
 
-      function EventButtonClicked(element, element_idx) {
-        var name    = element.name;
-        var checked = element.checked;
-
+      function RequestXML() {
         var request = new XMLHttpRequest();
         request.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
-            ParseChangeXML(this);
-          }
-        }
-
-        var requestString = "channel.xml?channel=" + element_idx + "&" + name + "=" + checked;
-        request.open("GET", requestString, true);
-        request.send(null);
-      };
-
-      function EventNumberChanged(element, element_idx) {
-        var name  = element.name;
-        var value = element.value;
-
-        var request = new XMLHttpRequest();
-        request.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            ParseChangeXML(this);
-          }
-        }
-
-        var requestString = "channel.xml?channel=" + element_idx + "&" + name + "=" + value;
-        request.open("GET", requestString, true);
-        request.send(null);
-      };
-
-      function EventComboChanged(element, element_idx) {
-        var name  = element.name;
-        var value = element.value;
-
-        var request = new XMLHttpRequest();
-        request.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            ParseChangeXML(this);
-          }
-        }
-
-        var requestString = "channel.xml?channel=" + element_idx + "&" + name + "=" + value;
-        request.open("GET", requestString, true);
-        request.send(null);
-      };
-
-      function EventConfig(element) {
-        var request = new XMLHttpRequest();
-        request.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            // We could do something once the request was completed
-          }
-        }
-
-        var requestString = "config?action=" + element.id;
-        request.open("GET", requestString, true);
-        request.send(null);
-      };
-
-      function ParseXML(xml) {
-        var table="<tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr>";
-
-        var channel = xml.responseXML.getElementsByTagName("channel");
-
-        for (var i = 0; i <channel.length; i++) {
-          var idx = channel[i].getAttribute('id');
-          var requestEnabled = channel[i].getElementsByTagName("enabled")[0].childNodes[0].nodeValue;
-          var requestState = channel[i].getElementsByTagName("state")[0].childNodes[0].nodeValue;
-          var requestStartTime = channel[i].getElementsByTagName("time")[0].childNodes[0].nodeValue;
-          var requestDuration = channel[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
-          var requestRepeat = channel[i].getElementsByTagName("repeat")[0].childNodes[0].nodeValue;
-          var requestSetpoint = channel[i].getElementsByTagName("setpoint")[0].childNodes[0].nodeValue;
-          var requestOffset = channel[i].getElementsByTagName("offset")[0].childNodes[0].nodeValue;
-
-          var buttonEnabled = "<label class=\"switch\"><input id=\"enabled" + idx + "\" name=\"enabled\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
-          if (requestEnabled == "true") {
-            buttonEnabled += "checked";
-          }
-          buttonEnabled += "><span class=\"slider round\"></span></label>"
-	  
-	        var buttonState = "<label class=\"switch\"><input id=\"state" + idx + "\" name=\"state\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
-          if (requestState == "active") {
-            buttonState += "checked";
-          }
-          buttonState += "><span class=\"slider round\"></span></label>"
-
-          var buttonSkip = "<label class=\"switch\"><input id=\"skip" + idx + "\" name=\"skip\" type=\"checkbox\" onclick=\"EventButtonClicked(this, " + idx + ")\" "
-          if (requestState == "skip") {
-            buttonSkip += "checked"
-          }
-          buttonSkip += "><span class=\"slider round\"></span></label>"
-
-          var optionNone = "<option value=\"none\" "
-          if (requestSetpoint == "none") {
-            optionNone += "selected"
-          }
-          optionNone += ">None</option>"
-
-          var optionSunrise = "<option value=\"sunrise\" "
-          if (requestSetpoint == "sunrise") {
-            optionSunrise += "selected"
-          }
-          optionSunrise += ">Sunrise</option>"
-
-          var optionNoon = "<option value=\"noon\" "
-          if (requestSetpoint == "noon") {
-            optionNoon += "selected"
-          }
-          optionNoon += ">Noon</option>"
-
-          var optionSunset = "<option value=\"sunset\" "
-          if (requestSetpoint == "sunset") {
-            optionSunset += "selected"
-          }
-          optionSunset += ">Sunset</option>"
-
-          var comboSetpoint = "<select id=\"setpoint" + idx + "\" name=\"setpoint\" onchange=\"EventComboChanged(this, " + idx + ")\">" + optionNone + optionSunrise + optionNoon + optionSunset + "</select>";
-
-          var editTime      = "<input id=\"time"      + idx + "\" name=\"time\"     type=\"time\"   value=\"" + requestStartTime + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-          var editDuration  = "<input id=\"duration"  + idx + "\" name=\"duration\" type=\"number\" value=\"" + requestDuration  + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-          var editRepeat    = "<input id=\"repeat"    + idx + "\" name=\"repeat\"   type=\"number\" value=\"" + requestRepeat    + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-          var editOffset    = "<input id=\"offset"    + idx + "\" name=\"offset\"   type=\"number\" value=\"" + requestOffset    + "\" onchange=\"EventNumberChanged(this, " + idx + ")\">";
-
-          table += "<tr><td>" + idx + "</td><td>" + buttonEnabled + "</td><td>" + buttonState + "</td><td>" + editTime + "</td><td>" +  editDuration + "</td><td>" + editRepeat + "</td><td>" + comboSetpoint + "</td><td>" + editOffset + "</td><td>" + buttonSkip + "</td></tr>";
-        }
-        document.getElementById("channels").innerHTML = table;
-      };
-
-      function LoadXML() {
-        var request = new XMLHttpRequest();
-        request.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
+            DrawTable(this.responseXML.getElementsByTagName("channel").length)
             ParseXML(this);
+            DisplayCurrentTime();
           }
         }
         request.open("GET", "channel.xml", true);
         request.send(null);
-        setTimeout('LoadXML()', 10000);
-        DisplayCurrentTime("currentTime");
       };
-
+      
       document.addEventListener('DOMContentLoaded', function() {
-        DisplayCurrentTime("currentTime");
-        LoadXML();
+        RequestXML();
+        setInterval('RequestXML()', 10000);
+        //setInterval('DisplayCurrentTime()', 1000);
       }, false);
     </script>
     <style>
@@ -309,10 +245,10 @@
   </head>
   <body>
       <h1>Garduino</h1>
-      <h3>Last update: <span id="currentTime"></span></h3>
+      <h2><span id="currentTime"></span></h2>
       <button class="button" id="save" name="buttonSave" onclick="EventConfig(this)">Save Config to EEPROM</button>
       <button class="button" id="load" name="buttonLoad" onclick="EventConfig(this)">Load Config from EEPROM</button>
-      <table id="channels"><tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr>";
+      <table id="channels"><tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr>
       <br><br>
   </body>
 </html>
