@@ -1,9 +1,9 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
+#include <LittleFS.h>
 
-#define TIMEOUT 1500
+#define TIMEOUT 10000
 
 // Replace with your network credentials
 const char* ssid     = "Jungholz";
@@ -16,8 +16,8 @@ ESP8266WebServer server(80);
 // Route for root / web page
 void handleRoot(){
   Serial.print("Serving index.html...");
-  if (SPIFFS.exists("/index.html")) {
-    File file = SPIFFS.open("/index.html", "r");
+  if (LittleFS.exists("/index.html")) {
+    File file = LittleFS.open("/index.html", "r");
     if (file.available()) {
       size_t size = server.streamFile(file, "text/html");
       Serial.println(size);
@@ -26,7 +26,7 @@ void handleRoot(){
       server.send(404, "text/plain", "Site not available");
       Serial.println("Could not read index.html");
     }
-    file.close(); 
+    file.close();
   }
   else {
     server.send(404, "text/plain", "Site could not be found");
@@ -83,7 +83,7 @@ void handleXML(){
     duration = millis() - startTime;
   } while (duration < TIMEOUT);
 
-  if (duration < TIMEOUT) {
+  if (duration < TIMEOUT && response.length() > 0) {
     server.send(200, "text/xml", response); 
   }
   else {
@@ -97,8 +97,8 @@ void setup() {
   Serial.begin(115200);
 
   // Initialize SPIFFS
-  if (!SPIFFS.begin()){
-    Serial.println("An Error occurred while mounting SPIFFS");
+  if (!LittleFS.begin()){
+    Serial.println("An Error occurred while mounting LittleFS");
   }
 
   // Initialize wifi and connect to network
@@ -119,10 +119,6 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  if (MDNS.begin("esp8266")) {
-    Serial.println("MDNS responder started");
-  }
-
   server.on("/", HTTP_GET, handleRoot);
   server.on("/channel.xml", HTTP_GET, handleXML);
   server.on("/config.xml",  HTTP_GET, handleXML);
@@ -136,5 +132,4 @@ void setup() {
 
 void loop(){
   server.handleClient();
-  MDNS.update();
 }

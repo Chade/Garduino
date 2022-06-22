@@ -202,7 +202,8 @@ bool parseConfig() {
   for(byte i = 0; i < NUM_CHANNEL; i++)
   {
     Serial.print('.');
-    parseConfig(i);
+    if (!parseConfig(i))
+      return false;
   }
 
   return true;
@@ -334,137 +335,229 @@ void handleRequest(Stream& streamIn, Stream& streamOut = Serial) {
     // =========================================================================
     // Handle "channel.xml" requests
     // =========================================================================
-    if ((index  = request.indexOf(F("channel.xml"))) >= 0) {
-      streamOut.println("[ESP8266 ] Responding to xml request " + request);
+    if ((index  = request.indexOf(F("channel.xml"))) != -1) {
+      streamOut.println("[ESP8266 ] Responding to 'channel.xml' request " + request);
       
       // It's a channel.xml request
       // Now we check, if the request contains specific data
-      if ((index = request.indexOf('?', index+11)) >= 0) {
+      if ((index = request.indexOf('?', index+11)) != -1) {
         // We now extract the channel index and key value pairs
-        // Read channel number
-        int channelIdxStart = request.indexOf(F("channel="), index+1) + 8;
-        byte channelIdx = request.substring(channelIdxStart).toInt();
-
-        int startIdx = index;
-        int sepIdx, endIdx;
-
-        do {
-          sepIdx = request.indexOf('=', startIdx+1);
-          endIdx = request.indexOf('&', sepIdx+1);
-          if (endIdx == 0) {
-            endIdx = request.length();
-          }
-
-          String key   = request.substring(startIdx+1, sepIdx);
-          key.trim();
-          
-          String value = request.substring(sepIdx+1, endIdx);
-          value.trim();
-
-          if (key == F("enabled")) {
-            channel[channelIdx].enable(toBool(value));
-            printRequest("Enable", value, channelIdx, streamOut);
-          }
-          else if (key == F("skip")) {
-            channel[channelIdx].doSkip(toBool(value));
-            printRequest("Skip", value, channelIdx, streamOut);
-          }
-          else if (key == F("state")) {
-            bool requestActive = toBool(value);
-            printRequest("Activate", value, channelIdx, streamOut);
-            if(!channel[channelIdx].active && requestActive) {
-              printRequest("State", "Activated", channelIdx, streamOut);
-              channel[channelIdx].enabled = false;
-              channel[channelIdx].active = true;
-              channel[channelIdx].skip = false;
+        // Read channel index
+        if ((index = request.indexOf(F("channel="), index+1)) != -1) {
+          byte channelIdx = request.substring(index+8).toInt();
+  
+          int startIdx = index;
+          int sepIdx, endIdx;
+  
+          do {
+            sepIdx = request.indexOf('=', startIdx);
+            if ((sepIdx == -1) || (sepIdx == request.length())) {
+              streamOut.println(F("[ESP8266 ] Maleformed key-value pair detected"));
+              break;
             }
-            else if(channel[channelIdx].active && !requestActive) {
-              printRequest("State", "Deactivated", channelIdx, streamOut);
-              channel[channelIdx].active = false;
-              if (channel[channelIdx].enabled) {
-                channel[channelIdx].skip = true;
+            
+            endIdx = request.indexOf('&', sepIdx+1);
+            if (endIdx == -1) {
+              endIdx = request.length();
+            }
+  
+            String key   = request.substring(startIdx, sepIdx);
+            key.trim();
+            
+            String value = request.substring(sepIdx+1, endIdx);
+            value.trim();
+  
+            // -------------------------------------------------------------------------
+            // Configure enabled
+            // -------------------------------------------------------------------------
+            if (key == F("enabled")) {
+              channel[channelIdx].enable(toBool(value));
+              printRequest("Enable", value, channelIdx, streamOut);
+            }
+            // -------------------------------------------------------------------------
+            // Configure skip
+            // -------------------------------------------------------------------------
+            else if (key == F("skip")) {
+              channel[channelIdx].doSkip(toBool(value));
+              printRequest("Skip", value, channelIdx, streamOut);
+            }
+            // -------------------------------------------------------------------------
+            // Configure state
+            // -------------------------------------------------------------------------
+            else if (key == F("state")) {
+              bool requestActive = toBool(value);
+              printRequest("Activate", value, channelIdx, streamOut);
+              if(!channel[channelIdx].active && requestActive) {
+                printRequest("State", "Activated", channelIdx, streamOut);
+                channel[channelIdx].enabled = false;
+                channel[channelIdx].active = true;
+                channel[channelIdx].skip = false;
               }
-              else {
-                channel[channelIdx].enabled = true;
+              else if(channel[channelIdx].active && !requestActive) {
+                printRequest("State", "Deactivated", channelIdx, streamOut);
+                channel[channelIdx].active = false;
+                if (channel[channelIdx].enabled) {
+                  channel[channelIdx].skip = true;
+                }
+                else {
+                  channel[channelIdx].enabled = true;
+                }
               }
             }
-          }
-          else if (key == F("time")) {
-            channel[channelIdx].time.setStartTime(toTime(value));
-            printRequest("StartTime", value, channelIdx, streamOut);
-          }
-          else if (key == F("duration")) {
-            channel[channelIdx].time.setDuration(toSeconds(value) * 60);
-            printRequest("Duration", value, channelIdx, streamOut);
-          }
-          else if (key == F("repeat")) {
-            channel[channelIdx].time.setRepeat(toSeconds(value) * 60);
-            printRequest("Repeat", value, channelIdx, streamOut);
-          }
-          else if (key == F("setpoint")) {
-            channel[channelIdx].time.setAdjustSetpoint(value);
-            printRequest("AdjustSetpoint", value, channelIdx, streamOut);
-          }
-          else if (key == F("offset")) {
-            channel[channelIdx].time.setAdjustOffset(toSignedSeconds(value) * 60);
-            printRequest("AdjustOffset", value, channelIdx, streamOut);
-          }
-          startIdx = endIdx;
-        } while (endIdx < request.length());
+            // -------------------------------------------------------------------------
+            // Configure time
+            // -------------------------------------------------------------------------
+            else if (key == F("time")) {
+              channel[channelIdx].time.setStartTime(toTime(value));
+              printRequest("StartTime", value, channelIdx, streamOut);
+            }
+            // -------------------------------------------------------------------------
+            // Configure duration
+            // -------------------------------------------------------------------------
+            else if (key == F("duration")) {
+              channel[channelIdx].time.setDuration(toSeconds(value) * 60);
+              printRequest("Duration", value, channelIdx, streamOut);
+            }
+            // -------------------------------------------------------------------------
+            // Configure repeat
+            // -------------------------------------------------------------------------
+            else if (key == F("repeat")) {
+              channel[channelIdx].time.setRepeat(toSeconds(value) * 60);
+              printRequest("Repeat", value, channelIdx, streamOut);
+            }
+            // -------------------------------------------------------------------------
+            // Configure setpoint
+            // -------------------------------------------------------------------------
+            else if (key == F("setpoint")) {
+              channel[channelIdx].time.setAdjustSetpoint(value);
+              printRequest("AdjustSetpoint", value, channelIdx, streamOut);
+            }
+            // -------------------------------------------------------------------------
+            // Configure offset
+            // -------------------------------------------------------------------------
+            else if (key == F("offset")) {
+              channel[channelIdx].time.setAdjustOffset(toSignedSeconds(value) * 60);
+              printRequest("AdjustOffset", value, channelIdx, streamOut);
+            }
+            // -------------------------------------------------------------------------
+            startIdx = endIdx+1;
+          } while (endIdx < request.length());
 
-        // Send response xml for modified channel
-        channel[channelIdx].printXML(streamIn, String(channelIdx));
-        //channel[channelIdx].printXML(streamOut, String(channelIdx));
+          // Send response xml for modified channel
+          channel[channelIdx].printXML(streamIn, String(channelIdx));
+          //channel[channelIdx].printXML(streamOut, String(channelIdx));
+        }
+        else {
+          streamOut.println(F("[ESP8266 ] Malformed 'channel.xml' request"));
+        }
       }
       else {
         // Send entire xml
         channelToXML(streamIn);
-        channelToXML(streamOut);
+        //channelToXML(streamOut);
       }
     }
     // =========================================================================
     // Handle "config" requests
     // =========================================================================
-    else if ((index = request.indexOf(F("config.xml"))) >= 0) {
-      streamOut.println("[ESP8266 ] Responding to xml request " + request);
-      if ((index = request.indexOf('?', index+10)) >= 0) {
-        streamOut.println("[ESP8266 ] Responding to xml request " + request);
-        
-        int actionIdxStart = request.indexOf(F("action="), index+1) + 7;
-        int actionIdxEnd   = request.length();
+    else if ((index = request.indexOf(F("config.xml"))) != -1) {
+      streamOut.println("[ESP8266 ] Responding to 'config.xml' request " + request);
+      
+      if ((index = request.indexOf('?', index+10)) != -1) {
+        bool ret = false;
+        if ((index = request.indexOf(F("action="), index+1)) != -1) {
 
-        String value = request.substring(actionIdxStart, actionIdxEnd);
-        value.trim();
-        
-        if (value == F("save")) {
-          streamOut.println("[ESP8266 ] Request saving config");
+          int actionIdxStart = index+7;
+          int actionIdxEnd   = request.length();
+  
+          String action = request.substring(actionIdxStart, actionIdxEnd);
+          action.trim();
 
-          for (byte i = 0; i < NUM_CHANNEL; i++) {
-            EEPROM.put(i * sizeof(Channel), channel[i]);
+          // -------------------------------------------------------------------------
+          // Write config to eeprom
+          // -------------------------------------------------------------------------
+          if (action == F("saveeeprom")) {
+            streamOut.println(F("[ESP8266 ] Write config to EEPROM"));
+            for (byte i = 0; i < NUM_CHANNEL; i++) {
+              EEPROM.put(i * sizeof(Channel), channel[i]);
+              ret = true;
+              markDirty(false, dirty_sdcard);
+            }
           }
-          
-          streamIn.println(F("<?xml version = \"1.0\" ?>"));
-          streamIn.print(F("<status>"));
-          streamIn.print(F("OK"));
-          streamIn.println(F("</status>"));
-          streamIn.println('\n');
-        }
-        else if (value == F("load")) {
-          streamOut.println("[ESP8266 ] Request loading config");
-
-          for (byte i = 0; i < NUM_CHANNEL; i++) {
-            EEPROM.get(i * sizeof(Channel), channel[i]);
+          // -------------------------------------------------------------------------
+          // Write config to sd
+          // -------------------------------------------------------------------------
+          else if (action == F("savesd")) {
+            streamOut.println(F("[ESP8266 ] Write config to SD"));
+            if (ret = SD.begin(SD_CS_PIN)) {
+              File configFile = SD.open(FILE_NAME, (O_WRITE | O_CREAT | O_TRUNC));
+              if (configFile) {
+                for (byte i = 0; i < NUM_CHANNEL; i++) {
+                  String header(F("Channel"));
+                  header.concat(i);
+                  channel[i].print(configFile, header);
+                }
+                configFile.close();
+                ret = true;
+                markDirty(dirty_eeprom, false);
+              }
+              SD.end();
+            }
           }
-          
-          streamIn.println(F("<?xml version = \"1.0\" ?>"));
-          streamIn.print(F("<status>"));
-          streamIn.print(F("OK"));
-          streamIn.println(F("</status>"));
-          streamIn.println('\n');
+          // -------------------------------------------------------------------------
+          // Read config from eeprom
+          // -------------------------------------------------------------------------
+          else if (action == F("loadeeprom")) {
+            streamOut.println(F("[ESP8266 ] Read config from EEPROM"));
+            for (byte i = 0; i < NUM_CHANNEL; i++) {
+              EEPROM.get(i * sizeof(Channel), channel[i]);
+              ret = true;
+              setupIOs();
+              markDirty(false, true);
+            }
+          }
+          // -------------------------------------------------------------------------
+          // Read config from sd
+          // -------------------------------------------------------------------------
+          else if (action == F("loadsd")) {
+            streamOut.println(F("[ESP8266 ] Read config from SD"));
+            if (ret = SD.begin(SD_CS_PIN)) {
+              ret = parseConfig();
+              SD.end();
+              setupIOs();
+              markDirty(true, false);
+            }
+          }
+          // -------------------------------------------------------------------------
+          // Unknown request
+          // -------------------------------------------------------------------------
+          else {
+            streamOut.println("[ESP8266 ] Request unknown action " + action);
+          }
         }
         else {
-          streamOut.println("[ESP8266 ] Request unknown action " + value);
+          streamOut.println(F("[ESP8266 ] Malformed 'config.xml' request"));
         }
+        // -------------------------------------------------------------------------
+        // Answer request
+        // -------------------------------------------------------------------------
+        streamIn.print(F("<?xml version = \"1.0\" ?>"));
+        streamIn.print(F("<status>"));
+        streamIn.print((ret == true) ? F("OK") : F("FAILED"));
+        streamIn.println(F("</status>"));
+        streamIn.println('\n');
+      }
+      else {
+        streamIn.println(F("<?xml version = \"1.0\" ?>"));
+        streamIn.println(F("<status>"));
+        streamIn.print(F("<eeprom>"));
+        streamIn.print((dirty_eeprom == true) ? F("DIRTY") : F("CLEAN"));
+        streamIn.println(F("</eeprom>"));
+        streamIn.print(F("<sd>"));
+        streamIn.print((dirty_sdcard == true) ? F("DIRTY") : F("CLEAN"));
+        streamIn.println(F("</sd>"));
+        streamIn.println(F("</status>"));
+        streamIn.println('\n'); 
       }
     }
     // =========================================================================

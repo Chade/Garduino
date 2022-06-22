@@ -237,19 +237,20 @@ void mFunc_readSD(uint8_t param) {
     }
     else {
       if(index < NUM_CHANNEL) {
+        sdStatus = F("Reading from SD");
         if(parseConfig(index)) {
-          Serial.print('.');
-          sdStatus = F("Reading from SD");
           index++;
         }
         else{
           Serial.print(F("Could not read from SD"));
-          sdReady = false;
           SD.end();
+          sdReady = false;
         }
       }
       else {
         Serial.println(F("Done"));
+        SD.end();
+        sdReady = false;
         LCDML.MENU_goRoot();
       }
     }
@@ -296,32 +297,29 @@ void mFunc_writeSD(uint8_t param) {
         timer = millis();
       }
     }
-    else {
+    else if (!dataFile) {
+      sdStatus = F("Opening file");
+      dataFile = SD.open(FILE_NAME, (O_WRITE | O_CREAT | O_TRUNC));
       if (!dataFile) {
-        sdStatus = F("Opening file");
-        dataFile = SD.open(FILE_NAME, (O_WRITE | O_CREAT | O_TRUNC));
-        if (!dataFile) {
-          Serial.print(F("Could not open file"));
-          sdReady = false;
-          SD.end();
-        }
+        Serial.print(F("Could not open file"));
+        SD.end();
+        sdReady = false;
+      }
+    }
+    else {
+      if(index < NUM_CHANNEL) {
+        sdStatus = F("Saving to SD");
+        String header(F("Channel"));
+        header.concat(index);
+        channel[index].print(dataFile, header);
+        index++;
       }
       else {
-        sdStatus = F("Saving to SD");
-        if (LCDML.TIMER_ms(timer, 500)) {
-          if(index < NUM_CHANNEL) {
-            Serial.print('.');
-            String header(F("Channel"));
-            header.concat(index);
-            channel[index].print(dataFile, header);
-            index++;
-          }
-          else {
-            Serial.println(F("Done"));
-            LCDML.MENU_goRoot();
-          }
-          timer = millis();
-        }
+        Serial.println(F("Done"));
+        dataFile.close();
+        SD.end();
+        sdReady = false;
+        LCDML.MENU_goRoot();
       }
     }
 
@@ -362,7 +360,6 @@ void mFunc_readEEPROM(uint8_t param) {
 
     if (LCDML.TIMER_ms(timer, 500)) {
       if(index < NUM_CHANNEL) {
-        Serial.print('.');
         EEPROM.get(index * sizeof(Channel), channel[index]);
         index++;
       }
@@ -410,7 +407,6 @@ void mFunc_writeEEPROM(uint8_t param) {
 
     if (LCDML.TIMER_ms(timer, 500)) {
       if(index < NUM_CHANNEL) {
-        Serial.print('.');
         EEPROM.put(index*sizeof(Channel), channel[index]);
         index++;
       }

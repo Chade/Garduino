@@ -14,6 +14,16 @@
           document.getElementById("currentTime").innerHTML = time;
       };
 
+      function ChangeColor(element, color) {
+        element.style.background = color;
+        element.style.color = 'white';
+
+        setTimeout(function(){
+          element.style.background = 'white';
+          element.style.color = 'black';
+        }, 2000);
+      };
+
       function EventButtonClicked(element, element_idx) {
         var request = new XMLHttpRequest();
         request.onreadystatechange = function() {
@@ -46,11 +56,17 @@
         var request = new XMLHttpRequest();
         request.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
-            DisplayCurrentTime();
+            if (this.responseXML.getElementsByTagName("status")[0].childNodes[0].nodeValue == "OK") {
+              ChangeColor(element, 'green');
+              RequestXML();
+            }
+            else if (this.responseXML.getElementsByTagName("status")[0].childNodes[0].nodeValue == "FAILED") {
+              ChangeColor(element, 'red')
+            }
           }
         }
 
-        var requestString = "config.xml?action=" + element.id;
+        var requestString = "config.xml?action=" + element.name + element.value;
         request.open("GET", requestString, true);
         request.send(null);
       };
@@ -93,32 +109,65 @@
           var responseOffset   = responseChannel[i].getElementsByTagName("offset")[0].childNodes[0].nodeValue;
           var responseSetpoint = responseChannel[i].getElementsByTagName("setpoint")[0].childNodes[0].nodeValue;
 
+          var currentEnabled   = document.getElementById("enabled"  + idx).checked;
+          var currentState     = document.getElementById("state"    + idx).checked;
+          var currentSkip      = document.getElementById("skip"     + idx).checked;
+          var currentTime      = document.getElementById("time"     + idx).value;
+          var currentDuration  = document.getElementById("duration" + idx).value;
+          var currentRepeat    = document.getElementById("repeat"   + idx).value;
+          var currentOffset    = document.getElementById("offset"   + idx).value;
+          var currentSetpoint  = document.getElementById("setpoint" + idx).value;
 
-          document.getElementById("time"     + idx).value = responseTime;
-          document.getElementById("duration" + idx).value = responseDuration;
-          document.getElementById("repeat"   + idx).value = responseRepeat;
-          document.getElementById("offset"   + idx).value = responseOffset;
-          document.getElementById("setpoint" + idx).value = responseSetpoint;
-      
-          
-          if (responseEnabled == "true") {
+          if (responseEnabled == "true" && currentEnabled == false) {
             document.getElementById("enabled" + idx).checked = true;
           }
-          else if (responseEnabled == "false"){
+          else if (responseEnabled == "false" && currentEnabled == true){
             document.getElementById("enabled" + idx).checked = false;
           }
 
           if (responseState == "skip") {
-            document.getElementById("state" + idx).checked = false;
-            document.getElementById("skip"  + idx).checked = true;
+            if (currentState == true) {
+              document.getElementById("state" + idx).checked = false;
+            }
+            if (currentSkip == false) {
+              document.getElementById("skip"  + idx).checked = true;
+            }
           }
           else if (responseState == "active") {
-            document.getElementById("state" + idx).checked = true;
-            document.getElementById("skip"  + idx).checked = false;
+            if (currentState == false) {
+              document.getElementById("state" + idx).checked = true;
+            }
+            if (currentSkip == true) {
+              document.getElementById("skip"  + idx).checked = false;
+            }
           }
           else {
-            document.getElementById("state" + idx).checked = false;
-            document.getElementById("skip"  + idx).checked = false;
+            if (currentState == true) {
+              document.getElementById("state" + idx).checked = false;
+            }
+            if (currentSkip == true) {
+              document.getElementById("skip"  + idx).checked = false;
+            }
+          }
+
+          if (responseTime != currentTime) {
+            document.getElementById("time"     + idx).value = responseTime;
+          }
+
+          if (responseDuration != currentDuration) {
+            document.getElementById("duration" + idx).value = responseDuration;
+          }
+
+          if (responseRepeat != currentRepeat) {
+            document.getElementById("repeat"   + idx).value = responseRepeat;
+          }
+
+          if (responseOffset != currentOffset) {
+            document.getElementById("offset"   + idx).value = responseOffset;
+          }
+
+          if (responseSetpoint != currentSetpoint) {
+            document.getElementById("setpoint" + idx).value = responseSetpoint;
           }
         }
       }
@@ -127,7 +176,11 @@
         var request = new XMLHttpRequest();
         request.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
-            DrawTable(this.responseXML.getElementsByTagName("channel").length)
+            var numRowsOld = document.getElementById("channels").rows.length - 1;
+            var numRowsNew = this.responseXML.getElementsByTagName("channel").length;
+            if (numRowsOld != numRowsNew) {
+              DrawTable(numRowsNew);
+            } 
             ParseXML(this);
             DisplayCurrentTime();
           }
@@ -220,8 +273,6 @@
         border-radius: 50%;
       }
       .button {
-        border: none;
-        color: white;
         padding: 16px 32px;
         text-align: center;
         text-decoration: none;
@@ -230,9 +281,9 @@
         margin: 4px 2px;
         transition-duration: 0.2s;
         cursor: pointer;
+        border: 2px solid #2196F3;
         background-color: white; 
         color: black; 
-        border: 2px solid #2196F3;
       }
       .button:hover {
         background-color: #2196F3;
@@ -245,10 +296,12 @@
   </head>
   <body>
       <h1>Garduino</h1>
-      <h2><span id="currentTime"></span></h2>
-      <button class="button" id="save" name="buttonSave" onclick="EventConfig(this)">Save Config to EEPROM</button>
-      <button class="button" id="load" name="buttonLoad" onclick="EventConfig(this)">Load Config from EEPROM</button>
-      <table id="channels"><tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr>
-      <br><br>
+      <h2><span id="currentTime">-- Time Not Set --</span></h2>
+      <table id="channels"><tr><th>Id</th><th>Enabled</th><th>State</th><th>Time</th><th>Duration</th><th>Repeat</th><th>AdjustSetpoint</th><th>AdjustOffset</th><th>Skip</th></tr></table>
+      <br/>
+      <button class="button" id="saveEeprom" name="save" value="eeprom" onclick="EventConfig(this)">Save Config to EEPROM</button>
+      <button class="button" id="loadEeprom" name="load" value="eeprom" onclick="EventConfig(this)">Load Config from EEPROM</button>
+      <button class="button" id="saveSd"     name="save" value="sd"     onclick="EventConfig(this)">Save Config to SD</button>
+      <button class="button" id="loadSd"     name="load" value="sd"     onclick="EventConfig(this)">Load Config from SD</button>
   </body>
 </html>
